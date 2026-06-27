@@ -125,18 +125,29 @@ nav{display:flex;gap:6px}
 .exp-btn:hover{border-color:var(--primary);color:var(--primary)}
 
 /* ai insight */
-.insight-item{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid var(--border);align-items:flex-start}
-.insight-item:last-child{border-bottom:none}
-.insight-icon{font-size:1.2rem;flex-shrink:0;width:28px;text-align:center;margin-top:1px}
-.insight-content{flex:1;min-width:0}
-.insight-lbl{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
-.insight-txt{font-size:.855rem;line-height:1.65;color:var(--text)}
-.ibadges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
 .ibadge{padding:2px 9px;border-radius:10px;font-size:.72rem;font-weight:600}
 .ib-g{background:#d1fae5;color:#065f46}
 .ib-a{background:#fef3c7;color:#92400e}
 .ib-r{background:#fee2e2;color:#991b1b}
 .ib-b{background:var(--primary-light);color:var(--primary)}
+/* insight rich redesign */
+.ins-section{padding:15px 0;border-bottom:1px solid var(--border)}
+.ins-section:last-child{border-bottom:none;padding-bottom:4px}
+.ins-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ins-icon{font-size:1.05rem;flex-shrink:0}
+.ins-title{font-size:.8rem;font-weight:800;color:var(--text);flex:1}
+.ins-body{font-size:.875rem;line-height:1.85;color:var(--text)}
+.ins-body p{margin-bottom:5px}
+.ins-body p:last-child{margin-bottom:0}
+.ins-hl{font-weight:700;color:var(--primary)}
+.ins-hlg{font-weight:700;color:#059669}
+.ins-hlr{font-weight:700;color:#dc2626}
+.ins-hla{font-weight:700;color:#d97706}
+.ins-nm{font-weight:700}
+.ins-num{font-weight:800;font-variant-numeric:tabular-nums}
+.ins-star-row{display:flex;align-items:center;gap:12px;margin:8px 0}
+.ins-stars{font-size:1.4rem;letter-spacing:3px;line-height:1}
+.ins-rec-box{background:var(--primary-light);border-left:4px solid var(--primary);padding:11px 14px;border-radius:0 8px 8px 0;margin-top:8px;font-size:.855rem;line-height:1.7;color:var(--text)}
 
 /* print */
 @media print{
@@ -548,91 +559,216 @@ function simulate() {
   const stars = selT.filter(t => (t.latest?.score ?? 0) >= 70).length;
   const mids  = selT.filter(t => { const s = t.latest?.score ?? 0; return s >= 50 && s < 70; }).length;
   const young = selT.length - stars - mids;
-  generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit: fitAvg, demoM, demoF, uniqGenre, avgFav });
+  generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit: fitAvg, demoM, demoF, uniqGenre, avgFav, rLo, rHi });
 
   const el = document.getElementById('results');
   el.style.display = 'block';
   el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-// ── AI 考察 ──────────────────────────────────────────────
-function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, demoM, demoF, uniqGenre, avgFav }) {
-  const AGES      = ['10代','20代','30代','40代','50代'];
-  const avgTrend  = avg(selT.map(t => t.latest?.trend_score ?? 0));
-  const fSum      = demoF.reduce((a,b) => a+b, 0);
-  const mSum      = demoM.reduce((a,b) => a+b, 0);
+// ── AI 考察（リッチ版）────────────────────────────────────
+function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, demoM, demoF, uniqGenre, avgFav, rLo, rHi }) {
+  const AGES = ['10代','20代','30代','40代','50代'];
+
+  // テキスト装飾ヘルパー
+  const nm  = n => `<span class="ins-nm">「${n}」</span>`;
+  const hl  = v => `<span class="ins-hl">${v}</span>`;
+  const hlg = v => `<span class="ins-hlg">${v}</span>`;
+  const hlr = v => `<span class="ins-hlr">${v}</span>`;
+  const hla = v => `<span class="ins-hla">${v}</span>`;
+  const pct = v => `<span class="ins-num">${v}%</span>`;
+
+  const fmtLbl  = FMT_LBL[fmt];
+  const slotLbl = SLOT_LBL[slot];
+  const isTV    = fmt === 'drama' || fmt === 'variety';
+  const rUnit   = isTV ? '%' : 'pt';
+  const rLbl    = isTV ? '視聴率' : '注目度';
+
+  const fSum     = demoF.reduce((a,b) => a+b, 0);
+  const mSum     = demoM.reduce((a,b) => a+b, 0);
   const femaleStr = fSum > mSum;
-  const topFi     = demoF.indexOf(Math.max(...demoF));
-  const topMi     = demoM.indexOf(Math.max(...demoM));
+  const topFi    = demoF.indexOf(Math.max(...demoF));
+  const topMi    = demoM.indexOf(Math.max(...demoM));
+  const topFPct  = demoF[topFi];
+  const topMPct  = demoM[topMi];
 
-  // 1. キャスティング総評
-  const castParts = [];
-  if (stars >= 1) castParts.push(`主演級${stars}名`);
-  if (mids  >= 1) castParts.push(`中堅${mids}名`);
-  if (young >= 1) castParts.push(`若手${young}名`);
-  const castDesc  = castParts.join('＋') || 'バランス型';
-  const targDesc  = femaleStr
-    ? `${AGES[topFi]}女性への訴求力が高い`
-    : `${AGES[topMi]}男性を中心とした`;
-  const divNote   = uniqGenre >= 3
-    ? '多彩なジャンル構成で幅広い視聴者層へのアプローチが期待できます。'
-    : uniqGenre === 1
-    ? 'ジャンルを絞ったことでコアファンへの訴求が集中しています。'
-    : '';
-  const summaryTxt = `${castDesc}の組み合わせで、${targDesc}キャスティングです。${divNote}`;
+  // 出演者情報
+  const topTalent = selT.reduce((a,b) => (a.latest?.score??0) >= (b.latest?.score??0) ? a : b);
+  const names5    = selT.slice(0,3).map(t => nm(t.name)).join('・') + (selT.length > 3 ? `ほか${selT.length-3}名` : '');
+  const genreSet  = [...new Set(selT.map(t => t.genre))];
+  const avgTrend  = avg(selT.map(t => t.latest?.trend_score ?? 0));
 
-  // 2. 強み
-  const strengths = [];
-  if      (buzz >= 75) strengths.push({ badge:'SNS爆発力',      cls:'ib-g', text:'SNS影響力が非常に高く、放送前からトレンド入りが期待できます。' });
-  else if (buzz >= 50) strengths.push({ badge:'SNS話題性',      cls:'ib-g', text:'SNSでの拡散力があり、放送と連動したバズが見込めます。' });
+  // ── ① キャスティング総評 ────────────────────────────────
+  let s1 = '';
 
-  if      (compat >= 82) strengths.push({ badge:'キャスト相性◎', cls:'ib-g', text:'キャスト同士の相性が非常に良く、共演による化学反応が期待できます。' });
-  else if (compat >= 65) strengths.push({ badge:'キャスト相性○', cls:'ib-b', text:'キャストのバランスが取れており、安定した仕上がりが期待できます。' });
+  // 構成タイプ判定（3パターン以上）
+  if (stars >= 2) {
+    s1 += `${slotLbl}${fmtLbl}として、${nm(topTalent.name)}を筆頭に主演クラス${hl(stars+'名')}が揃う強力なキャスティングです。`;
+    s1 += `複数の主演級が並ぶ布陣は、過去の${fmtLbl}でも初回から高い数字を記録した作品に共通するパターンであり、`;
+    s1 += uniqGenre >= 3
+      ? `さらに${genreSet.join('・')}と多彩なジャンル構成が加わることで、コアファン以外の幅広い視聴層へのクロスオーバー訴求が期待できます。`
+      : `${genreSet[0]}ジャンルのコアファンを核に据えながら、スコア帯の安定感で広告主にも説明しやすい編成となっています。`;
+    if (femaleStr) s1 += `特に${AGES[topFi]}女性層（視聴意向${pct(topFPct)}）への訴求が突出しており、F2・F3層をターゲットとするスポンサーへのアピール材料になります。`;
+    else           s1 += `男女ともにバランスよく届く構成で、世帯視聴率の引き上げが狙えます。`;
+  } else if (stars === 1 && mids >= 1) {
+    s1 += `${slotLbl}${fmtLbl}として、${nm(topTalent.name)}が看板を張り、実力派中堅${mids}名がサポートする王道キャスティングです。`;
+    s1 += `主演1名＋中堅複数というフォーマットは視聴率の安定性が高く、スポンサーからの信頼も得やすい鉄板構成です。`;
+    s1 += femaleStr
+      ? `${AGES[topFi]}女性（視聴意向${pct(topFPct)}）を中核ターゲットに置きながら、中堅陣の多様性で副次的な層にも届く奥行きがあります。`
+      : `男性視聴層（トップ${AGES[topMi]} ${pct(topMPct)}）も取り込みやすく、幅広い世帯視聴率獲得が見込めます。`;
+  } else if (young >= 3) {
+    s1 += `${slotLbl}${fmtLbl}として、フレッシュな若手タレント中心の攻めたキャスティングです。`;
+    s1 += `若手起用はコスト面での優位性とともに、Z世代・若年層からの新規ファン獲得という大きな可能性を秘めています。`;
+    s1 += fmt === 'streaming'
+      ? `配信コンテンツならではの一気見・周回需要とも相性が良く、SNS世代が自発的に拡散するバイラルコンテンツになるポテンシャルを持っています。`
+      : `放送後の切り抜き動画やSNS拡散でロングテールの話題継続が期待でき、${fmtLbl}としての新陳代謝を促す戦略的な選択です。`;
+    if (stars === 0) s1 += `ただし実績のある主演クラスが不在なため、脚本・演出の質が視聴率を大きく左右する点は留意が必要です。`;
+  } else if (uniqGenre >= 3) {
+    s1 += `${slotLbl}${fmtLbl}として、${genreSet.join('・')}と多彩なジャンルにまたがるクロスオーバーキャスティングです。`;
+    s1 += `単一ジャンルのファン層だけでなく複数の視聴者コミュニティにリーチできる点は、競合作品との明確な差別化要素になります。`;
+    s1 += `一方でキャラクター設定と世界観の統一感を保つ脚本上の工夫が、このキャストの力を最大限に引き出す鍵となります。`;
+  } else {
+    s1 += `${slotLbl}${fmtLbl}として、${names5}によるバランス型キャスティングです。`;
+    s1 += `主演・中堅・若手の役割分担が明確で、各タレントが互いの強みを補い合う安定したラインナップです。`;
+    s1 += `特定ファン層への偏りを避けながら幅広い視聴者層を取り込む戦略として、${slotLbl}帯の競合環境においても手堅い選択と言えます。`;
+  }
 
-  if      (avgFit >= 78) strengths.push({ badge:`${FMT_LBL[fmt]}適性◎`, cls:'ib-g', text:`${FMT_LBL[fmt]}フォーマットへの適性が高く、キャラクターが自然に活きます。` });
-  else if (avgFit >= 62) strengths.push({ badge:`${FMT_LBL[fmt]}適性○`, cls:'ib-b', text:`${FMT_LBL[fmt]}への適性が概ね良好です。` });
+  // ── ② 視聴率予測の根拠 ──────────────────────────────────
+  let s2 = `推定${rLbl}${hl(rLo+'〜'+rHi+rUnit)}の根拠を説明します。`;
 
-  if (avgTrend >= 70) strengths.push({ badge:'トレンド旬', cls:'ib-g', text:'Googleトレンドの注目度が高く、タイムリーな話題性を持つタレントが揃っています。' });
-  if (stars   >= 2)   strengths.push({ badge:'集客力',    cls:'ib-b', text:'主演クラスが複数いるため、初回から安定した集客が期待できます。' });
-  if (avgFav != null && avgFav >= 65) strengths.push({ badge:'好感度◎', cls:'ib-g', text:`調査データによる平均好感度スコアが${Math.round(avgFav)}と高く、視聴率・相性スコアに上乗せ補正を適用済みです。` });
-  if (!strengths.length) strengths.push({ badge:'ポテンシャル', cls:'ib-b', text:'各タレントに成長余地があり、起用による上積みが期待できます。' });
+  if (buzz >= 72) {
+    s2 += `まずSNSバズスコアが${hl(buzz+'/100')}と非常に高く、${nm(topTalent.name)}をはじめとする各タレントの発信力が視聴行動を直接後押しします。`;
+  } else if (buzz >= 48) {
+    s2 += `SNSバズスコア${hl(buzz+'/100')}は中〜高水準にあり、適切なプロモーション設計で視聴率の押し上げが見込めます。`;
+  } else {
+    s2 += `SNSバズスコアが${hla(buzz+'/100')}とやや控えめなため、プロモーション投資で数字を下支えすることが重要です。`;
+  }
 
-  // 3. 注意点
-  const warnings = [];
-  if      (riskKey === 'high') warnings.push({ badge:'炎上リスク高', cls:'ib-r', text:'炎上リスクが高いタレントが含まれています。PR・発言管理に細心の注意が必要です。' });
-  else if (riskKey === 'mid')  warnings.push({ badge:'炎上リスク中', cls:'ib-a', text:'炎上リスクが中程度のタレントが含まれています。過去のネガティブ報道を事前に確認してください。' });
+  if (avgFav != null) {
+    s2 += `調査ベースの好感度スコア（平均${hl(Math.round(avgFav)+'点')}）も視聴率算出に反映しており、`;
+    s2 += avgFav >= 62
+      ? `高い好感度は初回から安定した視聴習慣の形成を助け、視聴継続率の向上に寄与します。`
+      : `好感度の上積み余地があるため、第2話以降の視聴継続率改善に期待がかかります。`;
+  } else {
+    s2 += `${nm(topTalent.name)}はSNSスコア${hl(topTalent.latest?.score??'–')}を持ち、初回集客の核となります。`;
+  }
 
-  if (avgFav != null && avgFav < 40) warnings.push({ badge:'好感度△', cls:'ib-a', text:`調査データによる平均好感度スコアが${Math.round(avgFav)}と低めです。視聴率予測に下方補正が入っています。` });
-  if (compat < 52) warnings.push({ badge:'相性△',             cls:'ib-a', text:'キャスト間のスコア差が大きく、現場の化学反応に注意が必要です。' });
-  if (avgFit < 52) warnings.push({ badge:`${FMT_LBL[fmt]}適性△`, cls:'ib-a', text:`${FMT_LBL[fmt]}フォーマットへの適性がやや低いタレントが含まれています。キャラクター設計で補完してください。` });
-  if (young  >= 3) warnings.push({ badge:'実績不足',           cls:'ib-a', text:'若手が多いため視聴率の安定性に不確定要素があります。主演クラスによるサポートが重要です。' });
-  if (!warnings.length) warnings.push({ badge:'安定型', cls:'ib-g', text:'特筆すべきリスク要素は見当たりません。安定したキャスティングです。' });
+  s2 += `フォーマット適性${hl(Math.round(avgFit)+'/100')}は${avgFit >= 76 ? '非常に高く、キャスト力をフルに発揮できる条件が整っています' : avgFit >= 56 ? '良好で、演出の工夫次第でポテンシャルを最大化できます' : 'やや低めのため、キャラクター設計と脚本の作り込みで補完が必要です'}。`;
 
-  // 4. 競合との差別化
-  const genreList = [...new Set(selT.map(t => t.genre))].join('・');
-  let diffTxt;
-  if      (fmt === 'streaming')  diffTxt = '配信では若年層・コアファン向けコンテンツが強みです。一気見需要を意識したシリーズ設計で他作品と差別化できます。';
-  else if (uniqGenre >= 3)       diffTxt = `${genreList}の複合キャストは同時間帯の競合にない独自性があります。多様な視聴層へのクロスオーバー訴求が期待できます。`;
-  else if (!femaleStr)           diffTxt = '男性視聴者比率が高いキャスティングはゴールデン帯では希少性があり、スポーツ・アクション系企画との親和性が高いです。';
-  else if (slot === 'late')      diffTxt = '深夜帯はコアファン向けの実験的な作風が受け入れられやすく、話題性で競合と差別化しやすいフィールドです。';
-  else                           diffTxt = `${AGES[topFi]}を中心にターゲット層が明確なため、広告主へのアピールがしやすく、スポンサー獲得面でも優位性があります。`;
+  // ── ③ ターゲット層分析 ──────────────────────────────────
+  const sorted_f = demoF.map((v,i)=>({age:AGES[i],pct:v})).sort((a,b)=>b.pct-a.pct);
+  const sorted_m = demoM.map((v,i)=>({age:AGES[i],pct:v})).sort((a,b)=>b.pct-a.pct);
 
-  // 描画
-  const rows = [
-    { icon:'🎬', lbl:'キャスティング総評', badge:null, bdcls:'', text:summaryTxt },
-    ...strengths.slice(0,3).map(s => ({ icon:'✅', lbl:'強み', badge:s.badge, bdcls:s.cls, text:s.text })),
-    ...warnings .slice(0,2).map(w => ({ icon:'⚠️', lbl:'注意点', badge:w.badge, bdcls:w.cls, text:w.text })),
-    { icon:'💡', lbl:'競合との差別化', badge:null, bdcls:'', text:diffTxt },
+  let s3 = `コアターゲットは${hl(sorted_f[0].age+'女性')}（視聴意向${pct(sorted_f[0].pct)}）`;
+  if (femaleStr) {
+    s3 += `と${hl(sorted_f[1].age+'女性')}（${pct(sorted_f[1].pct)}）で、女性層全体が視聴の主軸を担います。`;
+    s3 += `男性層はトップが${sorted_m[0].age}（${pct(sorted_m[0].pct)}）と女性に比べて控えめですが、男女比の偏りはスポンサー選定において明確なターゲティングのしやすさに直結します。`;
+  } else {
+    s3 += `ですが、男性では${hl(sorted_m[0].age+'男性')}（視聴意向${pct(sorted_m[0].pct)}）が突出しており、男女でコアターゲットが異なる二極構造になっています。`;
+    s3 += `プロモーション施策においては、女性向けビジュアル展開と男性向けコンテンツ展開を並列で設計することで、双方のセグメントを効率よく取り込めます。`;
+  }
+
+  const fmtDemoNote = {
+    drama:     `${fmtLbl}は30〜40代女性のエンゲージメントが特に高い傾向があり、本キャストはその層にダイレクトに訴求できる構成です。`,
+    variety:   `${fmtLbl}は世帯視聴を促しやすく、40〜50代層の取り込みにも優位性があります。家族視聴を意識した企画設計を加えることで、さらに視聴率を引き上げられます。`,
+    movie:     `映画は20〜30代の劇場動員を主軸としつつ、配信・地上波放送の二次展開でより広い層への認知拡大が図れます。`,
+    streaming: `配信は10〜20代のヘビーユーザーが視聴の中心になるため、若年層への訴求力とSNS連動設計が継続的な作品評価を左右します。`,
+  }[fmt];
+  s3 += fmtDemoNote;
+
+  // ── ④ SNS・プロモーション予測 ──────────────────────────
+  let s4 = '';
+  if (buzz >= 72) {
+    s4 += `${names5}のSNS発信力は非常に高く、クランクインや主題歌解禁のタイミングでトレンド入りする可能性が高いです。`;
+    s4 += `放送日前後48時間のSNS言及急増を最大化するため、リアルタイム視聴を促す投稿テンプレートの事前配布やハッシュタグキャンペーンの設計を推奨します。`;
+  } else if (buzz >= 48) {
+    s4 += `SNSバズスコア${hl(buzz+'/100')}は中〜高水準にあり、ティザービジュアルや予告動画の戦略的リリースで放送前から話題形成が可能です。`;
+    s4 += `タレントの自己発信（インスタライブ・X投稿）と連動したキャンペーンを組み合わせることで、有機的な拡散エコシステムを構築できます。`;
+  } else {
+    s4 += `オーガニックなSNS拡散力が${hla('控えめ')}なため、メディア露出とインフルエンサー起用による外部刺激が視聴率の下支えとして重要になります。`;
+    s4 += `特にタイアップメディア・出演前特集・プレスイベントなど、認知形成に先行投資することで初回視聴のハードルを下げる設計を検討してください。`;
+  }
+
+  // ── ⑤ リスクと対策 ─────────────────────────────────────
+  let s5 = '';
+  if (riskKey === 'high') {
+    s5 += `炎上リスクを${hlr('高')}と評価しています。ニュース露出量とトレンドスコアのバランスからネガティブ報道が先行するリスクが読み取れます。`;
+    s5 += `制作サイドとして${hlr('①コメントガイドライン策定　②SNS発言研修の実施　③危機対応マニュアルの整備')}の三点を放送前に必ず完了させることを強く推奨します。問題発生時の初動対応の早さが風評被害の規模を大きく左右します。`;
+  } else if (riskKey === 'mid') {
+    s5 += `炎上リスクは${hla('中程度')}です。一部タレントで過去のネガティブ報道や評価が分かれるケースが含まれている可能性があります。`;
+    s5 += `${hla('クランクイン前のバックグラウンドチェックと広報ラインの事前確認')}を実施し、定期的なメディアモニタリング体制を整えてください。早期把握が対処コストを大幅に削減します。`;
+  } else {
+    s5 += `現指標では炎上リスクは${hlg('低')}と評価されます。ニュース露出とトレンドのバランスが取れており、ネガティブ話題が先行するリスクは現時点では限定的です。`;
+    s5 += `ただし高いSNS発信力は良い話題と悪い話題の双方を増幅させるため、${hlg('定常的なモニタリング体制は放送期間を通じて維持')}することを推奨します。`;
+  }
+
+  // ── ⑥ 総合推奨度 ──────────────────────────────────────
+  let starScore = 0;
+  starScore += compat >= 82 ? 2.0 : compat >= 65 ? 1.5 : compat >= 50 ? 1.0 : 0.5;
+  starScore += buzz   >= 72 ? 1.5 : buzz   >= 48 ? 1.0 : 0.5;
+  starScore += avgFit >= 76 ? 1.0 : avgFit >= 56 ? 0.7 : 0.3;
+  starScore += riskKey === 'low' ? 0.5 : riskKey === 'mid' ? 0.2 : 0;
+  if (avgFav != null) starScore += avgFav >= 65 ? 0.2 : avgFav < 40 ? -0.2 : 0;
+  const starInt = Math.max(1, Math.min(5, Math.round(starScore)));
+  const starStr = '★'.repeat(starInt) + '☆'.repeat(5 - starInt);
+
+  const recComments = {
+    5: '即決推奨。数字・話題性・安全性の三拍子が揃っており、このまま制作に進むことを強くお勧めします。',
+    4: '高推奨。主要指標が良好です。適切なプロモーション戦略を組み合わせれば高い成果が期待できます。',
+    3: '条件付き推奨。強みと改善点が明確なキャスティングです。脚本・演出の作り込みで評価が大きく変わります。',
+    2: '要検討。一部指標に懸念があります。代替キャストとの比較検討や制作コンセプトの再設計を推奨します。',
+    1: '再考推奨。複数の指標でリスクが顕在化しています。キャスト構成を根本から見直すことを強くお勧めします。',
+  }[starInt];
+
+  // ── 描画 ─────────────────────────────────────────────────
+  const badge = (lbl, cls) => `<span class="ibadge ${cls}" style="margin-left:auto">${lbl}</span>`;
+  const sections = [
+    {
+      icon:'🎬', title:'キャスティング総評',
+      bdg: badge(stars>=2?`主演級${stars}名`:young>=3?'若手中心':'バランス型', stars>=2?'ib-g':young>=3?'ib-a':'ib-b'),
+      body:`<p>${s1}</p>`,
+    },
+    {
+      icon:'📊', title:'視聴率予測の根拠',
+      bdg: badge(`${rLo}〜${rHi}${rUnit}`, 'ib-b'),
+      body:`<p>${s2}</p>`,
+    },
+    {
+      icon:'👥', title:'ターゲット層分析',
+      bdg: badge(femaleStr?`${sorted_f[0].age}女性 ${sorted_f[0].pct}%`:`${sorted_m[0].age}男性 ${sorted_m[0].pct}%`, 'ib-b'),
+      body:`<p>${s3}</p>`,
+    },
+    {
+      icon:'📱', title:'SNS・プロモーション予測',
+      bdg: badge(buzz>=72?'バズ期待大':buzz>=48?'バズ見込み':'要プロモーション強化', buzz>=72?'ib-g':buzz>=48?'ib-b':'ib-a'),
+      body:`<p>${s4}</p>`,
+    },
+    {
+      icon: riskKey==='high'?'🚨':riskKey==='mid'?'⚠️':'✅',
+      title:'リスクと対策',
+      bdg: badge({high:'高リスク',mid:'中リスク',low:'低リスク'}[riskKey], {high:'ib-r',mid:'ib-a',low:'ib-g'}[riskKey]),
+      body:`<p>${s5}</p>`,
+    },
+    {
+      icon:'🏆', title:'総合推奨度',
+      bdg:'',
+      body:`
+        <div class="ins-star-row">
+          <span class="ins-stars">${starStr}</span>
+          <span style="font-size:.85rem;font-weight:700;color:var(--muted)">${starInt}.0 / 5.0</span>
+        </div>
+        <div class="ins-rec-box">${recComments}</div>`,
+    },
   ];
 
-  document.getElementById('insight-body').innerHTML = rows.map(r => `
-    <div class="insight-item">
-      <div class="insight-icon">${r.icon}</div>
-      <div class="insight-content">
-        <div class="insight-lbl">${r.lbl}</div>
-        ${r.badge ? `<div class="ibadges"><span class="ibadge ${r.bdcls}">${r.badge}</span></div>` : ''}
-        <div class="insight-txt">${r.text}</div>
+  document.getElementById('insight-body').innerHTML = sections.map(s => `
+    <div class="ins-section">
+      <div class="ins-head">
+        <span class="ins-icon">${s.icon}</span>
+        <span class="ins-title">${s.title}</span>
+        ${s.bdg}
       </div>
+      <div class="ins-body">${s.body}</div>
     </div>`).join('');
 }
 
