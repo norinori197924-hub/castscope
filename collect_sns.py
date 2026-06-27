@@ -363,8 +363,11 @@ def init_db():
             yt_video_count INTEGER,
             yt_total_views INTEGER,
             yt_avg_views INTEGER,
+            yt_subscribers INTEGER,
+            yt_sub_score REAL,
             -- News
             news_count INTEGER,
+            news_sentiment INTEGER,
             -- Wikipedia
             wiki_pageviews INTEGER,
             -- 総合スコア
@@ -372,6 +375,16 @@ def init_db():
             FOREIGN KEY (talent_id) REFERENCES talent_master(id)
         )
     """)
+    # 既存DBへの列追加（ALTER TABLE は列が無い場合のみ実行）
+    for col, typedef in [
+        ("yt_subscribers",  "INTEGER"),
+        ("yt_sub_score",    "REAL"),
+        ("news_sentiment",  "INTEGER"),
+    ]:
+        try:
+            c.execute(f"ALTER TABLE sns_scores ADD COLUMN {col} {typedef}")
+        except Exception:
+            pass
     c.execute("""
         CREATE TABLE IF NOT EXISTS collect_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -465,12 +478,16 @@ def fetch_youtube(talent_name):
 # 3. NewsAPI（無料 開発者プラン: 月100件）
 # ============================================================
 
+_POS_WORDS = ["主演","出演","受賞","1位","話題","人気","決定","共演","初","新",
+              "映画","ドラマ","CM","写真集","ツアー","コンサート","結婚","おめでとう"]
+_NEG_WORDS = ["炎上","批判","謝罪","スキャンダル","降板","問題","騒動","疑惑",
+              "不倫","逮捕","書類送検","暴行","ハラスメント","引退","解雇","契約解除"]
+
 def fetch_news(talent_name):
     """
-    過去7日のニュース件数を取得
+    過去7日のニュース件数と感情スコアを取得
     Google News RSS（無料・認証不要）を使用。
-    NewsAPI 無料プランは日本語ソース収録が少ないため代替。
-    返り値: {"count": N}
+    返り値: {"count": N, "sentiment": 0-100}
     """
     try:
         import xml.etree.ElementTree as ET
@@ -479,11 +496,63 @@ def fetch_news(talent_name):
         req = urllib.request.Request(url, headers={"User-Agent": "CastScope/1.0"})
         with urllib.request.urlopen(req, timeout=10) as r:
             tree = ET.parse(r)
-        count = len(tree.findall(".//item"))
-        return {"count": count}
+        items = tree.findall(".//item")
+        count = len(items)
+        pos = neg = 0
+        for item in items:
+            title = (item.findtext("title") or "") + (item.findtext("description") or "")
+            pos += any(w in title for w in _POS_WORDS)
+            neg += any(w in title for w in _NEG_WORDS)
+        if pos + neg > 0:
+            sentiment = round(pos / (pos + neg) * 100)
+        else:
+            sentiment = 50
+        return {"count": count, "sentiment": sentiment}
     except Exception as e:
         print(f"  [News ERROR] {talent_name}: {e}")
-        return {"count": None}
+        return {"count": None, "sentiment": None}
+
+# ============================================================
+# 3b. YouTube チャンネル登録者数
+# ============================================================
+
+def fetch_yt_subscribers(talent_name):
+    """
+    チャンネル検索でタレントの公式チャンネル登録者数を取得
+    返り値: {"subscribers": N, "sub_score": 0-100}
+    """
+    if YOUTUBE_API_KEY == "YOUR_YOUTUBE_API_KEY":
+        return {"subscribers": None, "sub_score": None}
+    import math
+    best = 0
+    for q_suffix in [" official", " 公式"]:
+        try:
+            q = urllib.parse.quote(talent_name + q_suffix)
+            url = (
+                f"https://www.googleapis.com/youtube/v3/search"
+                f"?part=id&q={q}&type=channel&regionCode=JP&maxResults=3&key={YOUTUBE_API_KEY}"
+            )
+            with urllib.request.urlopen(url, timeout=10) as r:
+                items = json.loads(r.read())["items"]
+            if not items:
+                continue
+            cids = ",".join(i["id"]["channelId"] for i in items)
+            stats_url = (
+                f"https://www.googleapis.com/youtube/v3/channels"
+                f"?part=statistics&id={cids}&key={YOUTUBE_API_KEY}"
+            )
+            with urllib.request.urlopen(stats_url, timeout=10) as r:
+                channels = json.loads(r.read())["items"]
+            for ch in channels:
+                subs = int(ch["statistics"].get("subscriberCount", 0))
+                if subs > best:
+                    best = subs
+        except Exception as e:
+            print(f"  [YT-Sub ERROR] {talent_name}: {e}")
+    if best == 0:
+        return {"subscribers": None, "sub_score": None}
+    sub_score = round(min(math.log10(best + 1) / 7 * 100, 100), 1)
+    return {"subscribers": best, "sub_score": sub_score}
 
 # ============================================================
 # 4. Wikipedia Pageviews API（完全無料・認証不要）
@@ -518,35 +587,50 @@ def fetch_wikipedia(talent_name):
 # 5. SNSスコア統合計算
 # ============================================================
 
-def calc_score(trends, youtube, news, wiki):
+def calc_score(trends, youtube, news, wiki, sentiment=None, yt_sub=None):
     """
     各指標を0-100に正規化して加重平均
-    weights: Trends 35% / YouTube 35% / News 20% / Wiki 10%
+    weights: Trends 25% / YTavg 25% / News件数 15% / Wiki 10% / News感情 15% / YT登録者 10%
     """
+    import math
     scores = []
     weights = []
 
     # Google Trends (0-100 が元々の単位)
     if trends["score"] is not None:
         scores.append(min(trends["score"], 100))
-        weights.append(35)
+        weights.append(25)
 
     # YouTube avg_views を対数スケールで0-100化
-    # 目安: 100万再生 → 100点, 1万再生 → 50点
     if youtube["avg_views"] is not None and youtube["avg_views"] > 0:
-        import math
         yt_score = min(100, math.log10(youtube["avg_views"] + 1) / 6 * 100)
         scores.append(yt_score)
-        weights.append(35)
+        weights.append(25)
 
     # News件数 (300件以上で満点)
     if news["count"] is not None:
         scores.append(min(news["count"] / 3, 100))
-        weights.append(20)
+        weights.append(15)
 
     # Wikipedia (月10万PV以上で満点)
     if wiki["pageviews"] is not None:
         scores.append(min(wiki["pageviews"] / 1000, 100))
+        weights.append(10)
+
+    # News感情スコア (0-100)
+    sent = (sentiment or {}).get("sentiment") if isinstance(sentiment, dict) else sentiment
+    if sent is None and news.get("sentiment") is not None:
+        sent = news["sentiment"]
+    if sent is not None:
+        scores.append(sent)
+        weights.append(15)
+
+    # YouTube登録者スコア (0-100)
+    sub_score = None
+    if yt_sub is not None:
+        sub_score = yt_sub.get("sub_score")
+    if sub_score is not None:
+        scores.append(sub_score)
         weights.append(10)
 
     if not scores:
@@ -576,24 +660,27 @@ def collect_all():
 
         trends  = fetch_google_trends(name)
         youtube = fetch_youtube(name)
+        yt_sub  = fetch_yt_subscribers(name)
         news    = fetch_news(name)
         wiki    = fetch_wikipedia(name)
-        score   = calc_score(trends, youtube, news, wiki)
+        score   = calc_score(trends, youtube, news, wiki, yt_sub=yt_sub)
 
         c.execute("""
             INSERT INTO sns_scores (
                 talent_id, collected_at,
                 trend_score, trend_peak,
                 yt_video_count, yt_total_views, yt_avg_views,
-                news_count,
+                yt_subscribers, yt_sub_score,
+                news_count, news_sentiment,
                 wiki_pageviews,
                 sns_score_total
-            ) VALUES (?,?,?,?,?,?,?,?,?,?)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             tid, today,
             trends["score"],  trends["peak"],
             youtube["video_count"], youtube["total_views"], youtube["avg_views"],
-            news["count"],
+            yt_sub["subscribers"], yt_sub["sub_score"],
+            news["count"], news["sentiment"],
             wiki["pageviews"],
             score,
         ))
@@ -601,6 +688,7 @@ def collect_all():
 
         print(f"  Trends: {trends}")
         print(f"  YouTube: {youtube}")
+        print(f"  YT Subscribers: {yt_sub}")
         print(f"  News: {news}")
         print(f"  Wikipedia: {wiki}")
         print(f"  ★ SNSスコア: {score}")

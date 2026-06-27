@@ -162,7 +162,9 @@ td{padding:10px 13px;vertical-align:middle}
         <th data-k="genre" class="hide">ジャンル</th>
         <th data-k="trend_score">Trends</th>
         <th data-k="yt_avg_views" class="hide">YT avg</th>
+        <th data-k="yt_subscribers" class="hide">YT登録</th>
         <th data-k="news_count">News</th>
+        <th data-k="news_sentiment" class="hide">感情</th>
         <th data-k="wiki_pageviews" class="hide">Wiki PV</th>
         <th data-k="score">スコア</th>
         <th data-k="favorability" id="fav-th">好感度</th>
@@ -225,7 +227,9 @@ function render(){
       <td class="hide"><span class="tag">${t.genre}</span></td>
       <td class="n${l.trend_score!=null?' v':''}">${fmt(l.trend_score)}</td>
       <td class="n hide${l.yt_avg_views!=null?' v':''}">${fmt(l.yt_avg_views)}</td>
+      <td class="n hide${l.yt_subscribers!=null?' v':''}">${l.yt_subscribers!=null ? (l.yt_subscribers>=10000 ? Math.floor(l.yt_subscribers/10000)+'万' : l.yt_subscribers.toLocaleString()) : '<span class="dash">–</span>'}</td>
       <td class="n${l.news_count!=null?' v':''}">${fmt(l.news_count)}</td>
+      <td class="hide" style="text-align:center">${l.news_sentiment!=null ? (l.news_sentiment>=70?'🟢':l.news_sentiment>=40?'🟡':'🔴')+' '+l.news_sentiment : '<span class="dash">–</span>'}</td>
       <td class="n hide${l.wiki_pageviews!=null?' v':''}">${fmt(l.wiki_pageviews)}</td>
       <td>${bar(l.score)}</td>
       <td>${favBar(favMap[t.name])}</td>

@@ -45,7 +45,9 @@ def export():
 
     # 最新スコア（スコアがある人は降順、ない人を末尾に）
     c.execute("""
-        SELECT s.*
+        SELECT s.talent_id, s.collected_at,
+               s.trend_score, s.yt_avg_views, s.yt_subscribers,
+               s.news_count, s.news_sentiment, s.wiki_pageviews, s.sns_score_total
         FROM sns_scores s
         WHERE s.id IN (SELECT MAX(id) FROM sns_scores GROUP BY talent_id)
         ORDER BY s.sns_score_total DESC NULLS LAST, s.talent_id
@@ -55,7 +57,8 @@ def export():
     # 全時系列
     c.execute("""
         SELECT talent_id, collected_at,
-               trend_score, yt_avg_views, news_count, wiki_pageviews, sns_score_total
+               trend_score, yt_avg_views, yt_subscribers,
+               news_count, news_sentiment, wiki_pageviews, sns_score_total
         FROM sns_scores
         ORDER BY talent_id, collected_at
     """)
@@ -63,12 +66,14 @@ def export():
     for r in c.fetchall():
         tid = r["talent_id"]
         history_map.setdefault(tid, []).append({
-            "date":          r["collected_at"][:10] if r["collected_at"] else None,
-            "trend_score":   r["trend_score"],
-            "yt_avg_views":  r["yt_avg_views"],
-            "news_count":    r["news_count"],
-            "wiki_pageviews":r["wiki_pageviews"],
-            "score":         r["sns_score_total"],
+            "date":           r["collected_at"][:10] if r["collected_at"] else None,
+            "trend_score":    r["trend_score"],
+            "yt_avg_views":   r["yt_avg_views"],
+            "yt_subscribers": r["yt_subscribers"],
+            "news_count":     r["news_count"],
+            "news_sentiment": r["news_sentiment"],
+            "wiki_pageviews": r["wiki_pageviews"],
+            "score":          r["sns_score_total"],
         })
 
     conn.close()
@@ -81,12 +86,14 @@ def export():
         m     = masters.get(tid, {})
         genre = get_genre(tid)
         l = {
-            "collected_at":  row["collected_at"][:10] if row["collected_at"] else None,
-            "trend_score":   row["trend_score"],
-            "yt_avg_views":  row["yt_avg_views"],
-            "news_count":    row["news_count"],
-            "wiki_pageviews":row["wiki_pageviews"],
-            "score":         row["sns_score_total"],
+            "collected_at":   row["collected_at"][:10] if row["collected_at"] else None,
+            "trend_score":    row["trend_score"],
+            "yt_avg_views":   row["yt_avg_views"],
+            "yt_subscribers": row["yt_subscribers"],
+            "news_count":     row["news_count"],
+            "news_sentiment": row["news_sentiment"],
+            "wiki_pageviews": row["wiki_pageviews"],
+            "score":          row["sns_score_total"],
         }
         talents.append({
             "rank":    rank,

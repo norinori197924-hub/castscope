@@ -473,7 +473,10 @@ function simulate() {
     const news  = t.latest.news_count  ?? 50;
     return news / Math.max(trend, 4);
   }));
-  const riskKey = riskVal > 9 ? 'high' : riskVal > 4.5 ? 'mid' : 'low';
+  let riskKey = riskVal > 9 ? 'high' : riskVal > 4.5 ? 'mid' : 'low';
+  // 感情スコアが30以下なら炎上リスクを高に格上げ
+  const sentScores = selT.map(t => t.latest?.news_sentiment).filter(v => v != null);
+  if (sentScores.length > 0 && avg(sentScores) <= 30) riskKey = 'high';
   const RLBL = {high:'高',mid:'中',low:'低'};
 
   /* 5. デモグラフィック */
