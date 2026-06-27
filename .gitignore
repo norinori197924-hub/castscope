@@ -1,0 +1,19 @@
+# データベース（収集データはローカル保持）
+castscope.db
+
+# 環境変数・秘密情報
+.env
+*.env
+
+# ログ・一時出力
+collect_log_300.txt
+result_top20.txt
+top20_result.txt
+
+# Python キャッシュ
+__pycache__/
+*.pyc
+*.pyo
+
+# Claude Code
+.claude/
