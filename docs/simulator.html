@@ -297,6 +297,7 @@ const DEMO_DEF = {M10:36,M20:46,M30:51,M40:49,M50:43, F10:49,F20:59,F30:56,F40:5
 // ── 状態 ──────────────────────────────────────────────────
 let allT = [], selT = [], genre = 'all';
 let fmt = 'drama', slot = 'prime';
+let favMap = {}, favDataLoaded = false;
 
 // ── データ読み込み ─────────────────────────────────────────
 fetch('./scores.json')
@@ -310,6 +311,12 @@ fetch('./scores.json')
     document.getElementById('tlist').innerHTML =
       '<div style="padding:20px;text-align:center;color:#ef4444;font-size:.82rem">scores.json の読み込みに失敗しました</div>';
   });
+
+// 好感度スコアを読み込む（存在しない場合はSNSスコアのみで計算）
+fetch('./favor_scores.json')
+  .then(r => r.ok ? r.json() : null)
+  .then(d => { if (d && d.scores) { favMap = d.scores; favDataLoaded = true; } })
+  .catch(() => {});
 
 function buildGenreBtns() {
   const row = document.getElementById('genre-row');
@@ -412,10 +419,19 @@ function simulate() {
   const base   = avg(scores);
   const fm     = FMT_MULT[fmt],  sm = SLOT_MULT[slot];
 
+  /* favor_scores.json 統合 ─────────────────────────────── */
+  const favScores  = selT.map(t => favMap[t.name]).filter(v => v != null);
+  const avgFav     = favScores.length ? avg(favScores) : null;
+
   /* 1. 推定視聴率 / 注目度 */
-  const br   = (base / 100) * 14.5 * fm * sm + 0.6;
-  const rLo  = Math.max(0.3, br * 0.82).toFixed(1);
-  const rHi  = Math.min(25, br * 1.18).toFixed(1);
+  // 認知率プロキシ（好感度）で視聴率を上乗せ: avgFav=50→±0、=100→+1.2pt、=0→-1.2pt
+  const awarenessBonus = avgFav != null ? ((avgFav - 50) / 50) * 1.2 : 0;
+  const br   = (base / 100) * 14.5 * fm * sm + 0.6 + awarenessBonus;
+  // 視聴意向（好感度と正相関）でレンジを調整: 好感度高→レンジ狭く安定、低→幅広く不確実
+  const intentFactor = avgFav != null ? avgFav / 100 : 0.5;
+  const spread = 0.18 - intentFactor * 0.06;   // 0.18〜0.12
+  const rLo  = Math.max(0.3, br * (1 - spread)).toFixed(1);
+  const rHi  = Math.min(25,  br * (1 + spread)).toFixed(1);
   const isTV = fmt === 'drama' || fmt === 'variety';
   const rLbl = isTV ? '推定視聴率' : '推定注目度';
   const rUnit= isTV ? '%' : 'pt';
@@ -436,7 +452,9 @@ function simulate() {
   const variance    = avg(scores.map(s=>(s-base)**2));
   const balance     = clamp(28 - variance/22, 0, 28);
   const fitAvg      = avg(selT.map(t => FMT_FIT[fmt]?.[t.genre] ?? 55));
-  const compat      = Math.round(clamp(18 + diverseBonus + balance + fitAvg*0.28, 0, 99));
+  // 好感度が高いタレントは相性スコアを上乗せ: avgFav=50→±0、=100→+12、=0→-12
+  const favCompatBonus = avgFav != null ? Math.round((avgFav - 50) / 50 * 12) : 0;
+  const compat      = Math.round(clamp(18 + diverseBonus + balance + fitAvg*0.28 + favCompatBonus, 0, 99));
 
   /* 4. 炎上リスク */
   const riskVal = avg(selT.map(t => {
@@ -468,11 +486,12 @@ function simulate() {
 
   // ── 描画 ─────────────────────────────────────────────────
   /* Metric cards */
+  const favNote = avgFav != null ? `（好感度${Math.round(avgFav)}補正済）` : '';
   document.getElementById('m-row').innerHTML = `
     <div class="mc">
       <div class="ml">${rLbl}</div>
       <div class="mv">${rLo}〜${rHi}<span class="unit">${rUnit}</span></div>
-      <div class="ms">${FMT_LBL[fmt]} / ${SLOT_LBL[slot]}</div>
+      <div class="ms">${FMT_LBL[fmt]} / ${SLOT_LBL[slot]}${favNote}</div>
     </div>
     <div class="mc">
       <div class="ml">SNSバズスコア</div>
@@ -482,7 +501,7 @@ function simulate() {
     <div class="mc">
       <div class="ml">相性スコア</div>
       <div class="mv">${compat}<span class="unit">/100</span></div>
-      <div class="ms">キャスト相関</div>
+      <div class="ms">キャスト相関${avgFav != null ? '＋好感度' : ''}</div>
     </div>
     <div class="mc">
       <div class="ml">炎上リスク</div>
@@ -504,6 +523,7 @@ function simulate() {
   document.getElementById('tc-grid').innerHTML = selT.map(t => {
     const l   = t.latest;
     const fit = FMT_FIT[fmt]?.[t.genre] ?? 55;
+    const fav = favMap[t.name] ?? null;
     return `<div class="tc">
       <div class="tc-name">${t.name}</div>
       <div class="tc-tag">${t.genre}</div>
@@ -511,6 +531,7 @@ function simulate() {
       <div class="tc-row"><span class="tc-k">YT avg</span><span class="tc-v">${fmt2(l.yt_avg_views)}</span></div>
       <div class="tc-row"><span class="tc-k">News</span><span class="tc-v">${fmt2(l.news_count)}</span></div>
       <div class="tc-row"><span class="tc-k">Wiki PV</span><span class="tc-v">${fmt2(l.wiki_pageviews)}</span></div>
+      ${fav != null ? `<div class="tc-row"><span class="tc-k">好感度</span><span class="tc-v" style="color:var(--success)">${fav}</span></div>` : ''}
       <div class="tc-row">
         <span class="tc-k">フォーマット適性</span>
         <span class="tc-v">${fit}</span>
@@ -527,7 +548,7 @@ function simulate() {
   const stars = selT.filter(t => (t.latest?.score ?? 0) >= 70).length;
   const mids  = selT.filter(t => { const s = t.latest?.score ?? 0; return s >= 50 && s < 70; }).length;
   const young = selT.length - stars - mids;
-  generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit: fitAvg, demoM, demoF, uniqGenre });
+  generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit: fitAvg, demoM, demoF, uniqGenre, avgFav });
 
   const el = document.getElementById('results');
   el.style.display = 'block';
@@ -535,7 +556,7 @@ function simulate() {
 }
 
 // ── AI 考察 ──────────────────────────────────────────────
-function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, demoM, demoF, uniqGenre }) {
+function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, demoM, demoF, uniqGenre, avgFav }) {
   const AGES      = ['10代','20代','30代','40代','50代'];
   const avgTrend  = avg(selT.map(t => t.latest?.trend_score ?? 0));
   const fSum      = demoF.reduce((a,b) => a+b, 0);
@@ -573,6 +594,7 @@ function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, d
 
   if (avgTrend >= 70) strengths.push({ badge:'トレンド旬', cls:'ib-g', text:'Googleトレンドの注目度が高く、タイムリーな話題性を持つタレントが揃っています。' });
   if (stars   >= 2)   strengths.push({ badge:'集客力',    cls:'ib-b', text:'主演クラスが複数いるため、初回から安定した集客が期待できます。' });
+  if (avgFav != null && avgFav >= 65) strengths.push({ badge:'好感度◎', cls:'ib-g', text:`調査データによる平均好感度スコアが${Math.round(avgFav)}と高く、視聴率・相性スコアに上乗せ補正を適用済みです。` });
   if (!strengths.length) strengths.push({ badge:'ポテンシャル', cls:'ib-b', text:'各タレントに成長余地があり、起用による上積みが期待できます。' });
 
   // 3. 注意点
@@ -580,6 +602,7 @@ function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, d
   if      (riskKey === 'high') warnings.push({ badge:'炎上リスク高', cls:'ib-r', text:'炎上リスクが高いタレントが含まれています。PR・発言管理に細心の注意が必要です。' });
   else if (riskKey === 'mid')  warnings.push({ badge:'炎上リスク中', cls:'ib-a', text:'炎上リスクが中程度のタレントが含まれています。過去のネガティブ報道を事前に確認してください。' });
 
+  if (avgFav != null && avgFav < 40) warnings.push({ badge:'好感度△', cls:'ib-a', text:`調査データによる平均好感度スコアが${Math.round(avgFav)}と低めです。視聴率予測に下方補正が入っています。` });
   if (compat < 52) warnings.push({ badge:'相性△',             cls:'ib-a', text:'キャスト間のスコア差が大きく、現場の化学反応に注意が必要です。' });
   if (avgFit < 52) warnings.push({ badge:`${FMT_LBL[fmt]}適性△`, cls:'ib-a', text:`${FMT_LBL[fmt]}フォーマットへの適性がやや低いタレントが含まれています。キャラクター設計で補完してください。` });
   if (young  >= 3) warnings.push({ badge:'実績不足',           cls:'ib-a', text:'若手が多いため視聴率の安定性に不確定要素があります。主演クラスによるサポートが重要です。' });
