@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CastScope – タレント SNSスコア</title>
+<style>
+:root {
+  --primary:#2563eb; --primary-dark:#1d4ed8; --primary-light:#dbeafe;
+  --bg:#f1f5f9; --card:#fff; --text:#1e293b; --muted:#64748b;
+  --border:#e2e8f0; --success:#10b981; --warn:#f59e0b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Helvetica Neue',Arial,'Hiragino Kaku Gothic Pro',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+
+/* ── header ── */
+header{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{display:flex;align-items:baseline;gap:10px}
+.logo h1{font-size:1.7rem;font-weight:800;letter-spacing:.06em}
+.logo span{font-size:.8rem;opacity:.7}
+#updated{font-size:.75rem;opacity:.65;white-space:nowrap}
+
+/* ── container ── */
+.wrap{max-width:1400px;margin:0 auto;padding:20px 14px}
+
+/* ── cards ── */
+.cards{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.card{background:var(--card);border-radius:10px;padding:14px 20px;flex:1;min-width:140px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.card .lbl{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.card .val{font-size:1.5rem;font-weight:700;color:var(--primary);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── controls ── */
+.ctrl{background:var(--card);border-radius:10px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.genre-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.gbtn{padding:5px 13px;border:1px solid var(--border);border-radius:16px;background:#fff;cursor:pointer;font-size:.78rem;color:var(--muted);transition:all .15s;font-family:inherit}
+.gbtn:hover{border-color:var(--primary);color:var(--primary)}
+.gbtn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+#q{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-size:.875rem;outline:none;font-family:inherit}
+#q:focus{border-color:var(--primary)}
+
+/* ── table ── */
+.tbl-wrap{background:var(--card);border-radius:10px;overflow:auto;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+thead tr{background:#1e293b;color:#fff}
+th{padding:11px 13px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#334155}
+th.asc::after{content:" ▲";font-size:.65em;opacity:.8}
+th.desc::after{content:" ▼";font-size:.65em;opacity:.8}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+td{padding:10px 13px;vertical-align:middle}
+
+.rk{font-weight:700;color:var(--muted);text-align:center;width:44px}
+.rk.gold{color:#d97706}.rk.silver{color:#9ca3af}.rk.bronze{color:#b45309}
+.nm{font-weight:600}
+.nm-en{font-size:.72rem;color:var(--muted);margin-top:1px}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:500;background:var(--primary-light);color:var(--primary);white-space:nowrap}
+.n{text-align:right;font-variant-numeric:tabular-nums;color:#94a3b8}
+.n.v{color:var(--text)}
+.dash{color:#cbd5e1}
+
+/* score bar */
+.sc-val{font-weight:700;font-size:.9rem}
+.sc-bar{background:var(--bg);border-radius:3px;height:5px;margin-top:4px;overflow:hidden;min-width:80px}
+.sc-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#2563eb,#7c3aed)}
+
+#foot{font-size:.75rem;color:var(--muted);text-align:right;margin-top:10px}
+
+/* mobile */
+@media(max-width:700px){
+  .hide{display:none}
+  header{padding:14px 16px}
+  .logo h1{font-size:1.3rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <h1>CastScope</h1>
+    <span>タレント SNSスコア ダッシュボード</span>
+  </div>
+  <div id="updated">読み込み中…</div>
+</header>
+
+<div class="wrap">
+
+  <div class="cards">
+    <div class="card"><div class="lbl">タレント総数</div><div class="val" id="c-total">–</div></div>
+    <div class="card"><div class="lbl">総合 1位</div><div class="val" id="c-top">–</div></div>
+    <div class="card"><div class="lbl">最高スコア</div><div class="val" id="c-score">–</div></div>
+    <div class="card"><div class="lbl">スコア算出数</div><div class="val" id="c-scored">–</div></div>
+  </div>
+
+  <div class="ctrl">
+    <div class="genre-row" id="genre-row">
+      <button class="gbtn on" data-g="all">すべて</button>
+    </div>
+    <input id="q" type="text" placeholder="名前で検索…">
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th data-k="rank">順位</th>
+        <th data-k="name">名前</th>
+        <th data-k="genre" class="hide">ジャンル</th>
+        <th data-k="trend_score">Trends</th>
+        <th data-k="yt_avg_views" class="hide">YT avg</th>
+        <th data-k="news_count">News</th>
+        <th data-k="wiki_pageviews" class="hide">Wiki PV</th>
+        <th data-k="score">スコア</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+  <div id="foot"></div>
+
+</div>
+
+<script>
+const fmt = n => n == null ? '<span class="dash">–</span>' : Number(n).toLocaleString('ja-JP');
+
+let all = [], genre = 'all', sk = 'rank', sd = 1;
+
+function rankCls(r){ return r===1?'rk gold':r===2?'rk silver':r===3?'rk bronze':'rk'; }
+
+function bar(score){
+  if(score==null) return '<span class="dash">–</span>';
+  return `<div><span class="sc-val">${score}</span><div class="sc-bar"><div class="sc-fill" style="width:${Math.min(score,100)}%"></div></div></div>`;
+}
+
+function render(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  let data = all.filter(t => {
+    if(genre!=='all' && t.genre!==genre) return false;
+    if(q && !t.name.includes(q) && !t.name_en.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const get = (t,k) => {
+    if(k==='rank')  return t.rank;
+    if(k==='name')  return t.name;
+    if(k==='genre') return t.genre;
+    if(k==='score') return t.latest.score;
+    return t.latest[k];
+  };
+
+  data.sort((a,b)=>{
+    let av=get(a,sk), bv=get(b,sk);
+    if(av==null && bv==null) return 0;
+    if(av==null) return 1;
+    if(bv==null) return -1;
+    if(typeof av==='string') return sd*(av<bv?-1:av>bv?1:0);
+    return sd*(av-bv);
+  });
+
+  document.getElementById('tb').innerHTML = data.map((t,i)=>{
+    const l=t.latest, disp=i+1;
+    return `<tr>
+      <td class="${rankCls(disp)}">${disp}</td>
+      <td><div class="nm">${t.name}</div><div class="nm-en">${t.name_en}</div></td>
+      <td class="hide"><span class="tag">${t.genre}</span></td>
+      <td class="n${l.trend_score!=null?' v':''}">${fmt(l.trend_score)}</td>
+      <td class="n hide${l.yt_avg_views!=null?' v':''}">${fmt(l.yt_avg_views)}</td>
+      <td class="n${l.news_count!=null?' v':''}">${fmt(l.news_count)}</td>
+      <td class="n hide${l.wiki_pageviews!=null?' v':''}">${fmt(l.wiki_pageviews)}</td>
+      <td>${bar(l.score)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('foot').textContent = `${data.length} 件表示`;
+}
+
+fetch('./scores.json')
+  .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d=>{
+    all = d.talents;
+    document.getElementById('updated').textContent = '最終更新: ' + d.updated_at.replace('T',' ');
+    document.getElementById('c-total').textContent  = d.total;
+    document.getElementById('c-scored').textContent = d.scored;
+
+    const top = all.find(t=>t.latest.score!=null);
+    if(top){
+      document.getElementById('c-top').textContent   = top.name;
+      document.getElementById('c-score').textContent = top.latest.score;
+    }
+
+    // ジャンルボタン生成
+    const row = document.getElementById('genre-row');
+    [...new Set(all.map(t=>t.genre))].forEach(g=>{
+      const b=document.createElement('button');
+      b.className='gbtn'; b.dataset.g=g; b.textContent=g;
+      b.onclick=()=>setGenre(g);
+      row.appendChild(b);
+    });
+    row.querySelector('[data-g="all"]').onclick=()=>setGenre('all');
+
+    render();
+  })
+  .catch(()=>{
+    document.getElementById('tb').innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8">scores.json を読み込めませんでした。<br>ローカル確認は Live Server などをご利用ください。</td></tr>';
+  });
+
+function setGenre(g){
+  genre=g;
+  document.querySelectorAll('.gbtn').forEach(b=>b.classList.toggle('on',b.dataset.g===g));
+  render();
+}
+
+// ヘッダークリックでソート
+document.querySelectorAll('th[data-k]').forEach(th=>{
+  th.onclick=()=>{
+    const k=th.dataset.k;
+    if(sk===k){ sd*=-1; }
+    else{ sk=k; sd=k==='rank'||k==='name'||k==='genre'?1:-1; }
+    document.querySelectorAll('th').forEach(h=>h.classList.remove('asc','desc'));
+    th.classList.add(sd===1?'asc':'desc');
+    render();
+  };
+});
+
+document.getElementById('q').addEventListener('input', render);
+</script>
+</body>
+</html>
