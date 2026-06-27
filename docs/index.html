@@ -315,6 +315,39 @@ function parseRaw(text){
 }
 
 function calcFav(layoutRows, rawData, talentNames){
+  const hdrs = rawData.headers;
+
+  // CastScope形式: T1t1〜T5t1（タレントID）とQ2s1〜Q2s5（好感度）を持つ
+  if(hdrs.includes('T1t1') && hdrs.includes('Q2s1')){
+    // scores.jsonのタレント一覧からID→名前マップを構築
+    const idMap = {};
+    all.forEach(t => { idMap[String(t.id)] = t.name; });
+
+    // スロット単位でQ2を集計し、タレントIDで名前に紐付ける
+    const sum = {}, cnt = {};
+    for(const row of rawData.rows){
+      for(let s = 1; s <= 5; s++){
+        const tid = row[`T${s}t1`];
+        const q2  = parseInt(row[`Q2s${s}`]) || 0;
+        if(!tid || q2 === 0) continue;
+        const name = idMap[tid];
+        if(!name) continue;
+        sum[name] = (sum[name] || 0) + q2;
+        cnt[name] = (cnt[name] || 0) + 1;
+      }
+    }
+
+    // Q2スケール: 1=全く好感なし〜5=非常に好感あり → 0〜100点換算
+    const scores = {};
+    for(const [name, c] of Object.entries(cnt)){
+      const avg = sum[name] / c;
+      scores[name] = Math.round((avg - 1) / 4 * 100);
+    }
+    const matched = Object.keys(scores).length;
+    return {scores, question:'Q2 好感度（スロット集計）', matched, total:rawData.rows.length};
+  }
+
+  // 汎用形式: レイアウトのアイテム名とタレント名を照合
   const byQ = {};
   for(const r of layoutRows){ if(!byQ[r.qNum]) byQ[r.qNum]=[]; byQ[r.qNum].push(r); }
 
@@ -341,7 +374,7 @@ function calcFav(layoutRows, rawData, talentNames){
     } else {
       const cats=r.cats||5;
       const avgV=vals.reduce((a,b)=>a+b,0)/vals.length;
-      score=Math.round((cats-avgV)/(cats-1)*100);
+      score=Math.round((avgV-1)/(cats-1)*100);
     }
     scores[r.itemName]=score;
   }
