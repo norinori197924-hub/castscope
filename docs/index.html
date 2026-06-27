@@ -70,6 +70,23 @@ td{padding:10px 13px;vertical-align:middle}
 
 #foot{font-size:.75rem;color:var(--muted);text-align:right;margin-top:10px}
 
+/* upload */
+.upload-wrap{background:var(--card);border-radius:10px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.upload-hd{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.upload-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.upload-lbl{flex:1;min-width:180px;display:flex;align-items:center;gap:7px;padding:8px 12px;border:1.5px dashed var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;color:var(--muted);transition:all .15s;background:#fff;overflow:hidden}
+.upload-lbl:hover{border-color:var(--primary);color:var(--primary)}
+.upload-lbl.ok{border-style:solid;border-color:var(--success);color:var(--success)}
+.upload-lbl input{display:none}
+.upload-fn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upload-btn{padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s}
+.upload-btn:hover{background:var(--primary-dark)}
+.upload-msg{margin-top:8px;font-size:.77rem;min-height:17px}
+.msg-ok{color:var(--success)}.msg-err{color:#ef4444}
+/* fav bar */
+.fav-bar{background:var(--bg);border-radius:3px;height:5px;margin-top:4px;overflow:hidden;min-width:70px}
+.fav-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#10b981,#06b6d4)}
+
 /* mobile */
 @media(max-width:700px){
   .hide{display:none}
@@ -108,6 +125,22 @@ td{padding:10px 13px;vertical-align:middle}
     <input id="q" type="text" placeholder="名前で検索…">
   </div>
 
+  <div class="upload-wrap">
+    <div class="upload-hd">調査データアップロード</div>
+    <div class="upload-row">
+      <label class="upload-lbl" id="lyt-lbl">
+        <span>📄</span><span class="upload-fn" id="lyt-fn">レイアウトファイル (.txt)</span>
+        <input type="file" id="lyt-file" accept=".txt">
+      </label>
+      <label class="upload-lbl" id="raw-lbl">
+        <span>📊</span><span class="upload-fn" id="raw-fn">ローデータファイル (.txt)</span>
+        <input type="file" id="raw-file" accept=".txt">
+      </label>
+      <button class="upload-btn" id="upload-btn">アップロードして反映</button>
+    </div>
+    <div class="upload-msg" id="upload-msg"></div>
+  </div>
+
   <div class="tbl-wrap">
     <table>
       <thead><tr>
@@ -119,6 +152,7 @@ td{padding:10px 13px;vertical-align:middle}
         <th data-k="news_count">News</th>
         <th data-k="wiki_pageviews" class="hide">Wiki PV</th>
         <th data-k="score">スコア</th>
+        <th data-k="favorability" id="fav-th">好感度</th>
       </tr></thead>
       <tbody id="tb"></tbody>
     </table>
@@ -130,13 +164,18 @@ td{padding:10px 13px;vertical-align:middle}
 <script>
 const fmt = n => n == null ? '<span class="dash">–</span>' : Number(n).toLocaleString('ja-JP');
 
-let all = [], genre = 'all', sk = 'rank', sd = 1;
+let all = [], genre = 'all', sk = 'rank', sd = 1, favMap = {};
 
 function rankCls(r){ return r===1?'rk gold':r===2?'rk silver':r===3?'rk bronze':'rk'; }
 
 function bar(score){
   if(score==null) return '<span class="dash">–</span>';
   return `<div><span class="sc-val">${score}</span><div class="sc-bar"><div class="sc-fill" style="width:${Math.min(score,100)}%"></div></div></div>`;
+}
+
+function favBar(score){
+  if(score==null) return '<span class="dash">–</span>';
+  return `<div><span class="sc-val">${score}</span><div class="fav-bar"><div class="fav-fill" style="width:${Math.min(score,100)}%"></div></div></div>`;
 }
 
 function render(){
@@ -148,10 +187,11 @@ function render(){
   });
 
   const get = (t,k) => {
-    if(k==='rank')  return t.rank;
-    if(k==='name')  return t.name;
-    if(k==='genre') return t.genre;
-    if(k==='score') return t.latest.score;
+    if(k==='rank')        return t.rank;
+    if(k==='name')        return t.name;
+    if(k==='genre')       return t.genre;
+    if(k==='score')       return t.latest.score;
+    if(k==='favorability') return favMap[t.name] ?? null;
     return t.latest[k];
   };
 
@@ -175,6 +215,7 @@ function render(){
       <td class="n${l.news_count!=null?' v':''}">${fmt(l.news_count)}</td>
       <td class="n hide${l.wiki_pageviews!=null?' v':''}">${fmt(l.wiki_pageviews)}</td>
       <td>${bar(l.score)}</td>
+      <td>${favBar(favMap[t.name])}</td>
     </tr>`;
   }).join('');
 
@@ -230,6 +271,111 @@ document.querySelectorAll('th[data-k]').forEach(th=>{
 });
 
 document.getElementById('q').addEventListener('input', render);
+
+// ── アップロード ────────────────────────────────────────────
+let lytFile = null, rwFile = null;
+
+document.getElementById('lyt-file').addEventListener('change', function(){
+  lytFile = this.files[0];
+  if(lytFile){ document.getElementById('lyt-fn').textContent = lytFile.name; document.getElementById('lyt-lbl').classList.add('ok'); }
+});
+document.getElementById('raw-file').addEventListener('change', function(){
+  rwFile = this.files[0];
+  if(rwFile){ document.getElementById('raw-fn').textContent = rwFile.name; document.getElementById('raw-lbl').classList.add('ok'); }
+});
+
+function readText(file){
+  const tryEnc = enc => new Promise((res,rej)=>{ const r=new FileReader(); r.onerror=rej; r.onload=e=>res(e.target.result); r.readAsText(file,enc); });
+  return tryEnc('UTF-8').then(t => t.includes('�') ? tryEnc('Shift-JIS') : t);
+}
+
+function parseLayout(text){
+  const rows = [];
+  for(const line of text.split('\n')){
+    if(!line.trim()) continue;
+    const c = line.split('\t');
+    if(c.length < 7) continue;
+    if(!/^Q\d/i.test(c[0].trim())) continue; // ヘッダ行スキップ
+    rows.push({ qNum:c[0].trim(), qType:c[1]?.trim()||'', itemName:c[2]?.trim()||'',
+                cats:parseInt(c[5])||0, col:c[6].trim(), qText:c.slice(8).join('\t').trim() });
+  }
+  return rows;
+}
+
+function parseRaw(text){
+  const lines = text.split('\n').map(l=>l.trimEnd()).filter(l=>l.trim());
+  if(lines.length < 2) return {headers:[],rows:[]};
+  const headers = lines[0].split('\t').map(h=>h.trim());
+  const rows = lines.slice(1).map(l=>{
+    const v=l.split('\t'); const o={};
+    headers.forEach((h,i)=>{ o[h]=v[i]?.trim()||''; });
+    return o;
+  });
+  return {headers,rows};
+}
+
+function calcFav(layoutRows, rawData, talentNames){
+  const byQ = {};
+  for(const r of layoutRows){ if(!byQ[r.qNum]) byQ[r.qNum]=[]; byQ[r.qNum].push(r); }
+
+  let bestQ=null, bestN=0;
+  for(const [qNum,rows] of Object.entries(byQ)){
+    const uniq=[...new Set(rows.map(r=>r.itemName).filter(Boolean))];
+    const n=uniq.filter(n=>talentNames.includes(n)).length;
+    if(n>bestN){ bestN=n; bestQ=qNum; }
+  }
+  if(!bestQ||bestN===0) return {scores:{},question:null,matched:0,total:0};
+
+  const qRows=byQ[bestQ], qType=qRows[0].qType, total=rawData.rows.length;
+  const scores={}, seen=new Set();
+
+  for(const r of qRows){
+    if(!r.itemName||!r.col||seen.has(r.itemName)) continue;
+    if(!talentNames.includes(r.itemName)) continue;
+    seen.add(r.itemName);
+    const vals=rawData.rows.map(row=>parseInt(row[r.col])||0).filter(v=>v>0);
+    if(!vals.length) continue;
+    let score;
+    if(qType==='MA'){
+      score=Math.round(vals.filter(v=>v===1).length/total*100);
+    } else {
+      const cats=r.cats||5;
+      const avgV=vals.reduce((a,b)=>a+b,0)/vals.length;
+      score=Math.round((cats-avgV)/(cats-1)*100);
+    }
+    scores[r.itemName]=score;
+  }
+  return {scores, question:qRows[0].qText||bestQ, matched:Object.keys(scores).length, total};
+}
+
+function setMsg(text,type){
+  const el=document.getElementById('upload-msg');
+  el.textContent=text;
+  el.className='upload-msg '+(type==='ok'?'msg-ok':'msg-err');
+}
+
+document.getElementById('upload-btn').addEventListener('click',()=>{
+  if(!lytFile||!rwFile){ setMsg('2つのファイルを選択してください','err'); return; }
+  const btn=document.getElementById('upload-btn');
+  btn.disabled=true; btn.textContent='解析中…';
+  Promise.all([readText(lytFile),readText(rwFile)]).then(([lt,rt])=>{
+    const layoutRows=parseLayout(lt);
+    const rawData=parseRaw(rt);
+    const names=all.map(t=>t.name);
+    const {scores,question,matched,total}=calcFav(layoutRows,rawData,names);
+    if(matched===0){
+      setMsg('タレント名が一致するデータが見つかりませんでした。レイアウトのアイテム名を確認してください。','err');
+      return;
+    }
+    favMap=scores;
+    render();
+    setMsg(`✓ ${total} サンプル ／ ${matched} タレント分の好感度スコアを反映しました（${question}）`,'ok');
+  }).catch(e=>{
+    setMsg('解析に失敗しました: '+e.message,'err');
+  }).finally(()=>{
+    btn.disabled=false; btn.textContent='アップロードして反映';
+  });
+});
 </script>
 </body>
 </html>
