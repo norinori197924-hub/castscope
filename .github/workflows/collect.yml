@@ -1,0 +1,42 @@
+name: Weekly SNS Data Collection
+
+on:
+  schedule:
+    - cron: '0 21 * * 0'  # 毎週日曜 21:00 UTC = 月曜 6:00 JST
+  workflow_dispatch:        # 手動実行ボタン
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # castscope.db をコミット・プッシュするために必要
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pytrends requests
+
+      - name: Run SNS data collection
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          NEWS_API_KEY: ${{ secrets.NEWSAPI }}
+        run: python collect_sns.py
+
+      - name: Commit and push castscope.db
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f castscope.db
+          if git diff --cached --quiet; then
+            echo "castscope.db に変更なし。スキップ。"
+          else
+            git commit -m "data: collect $(date +'%Y-%m-%d')"
+            git push
+          fi
