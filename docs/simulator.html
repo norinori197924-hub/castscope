@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CastScope – キャスティングシミュレーター</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-dark:#1d4ed8;--primary-light:#dbeafe;
+  --bg:#f1f5f9;--card:#fff;--text:#1e293b;--muted:#64748b;
+  --border:#e2e8f0;--success:#10b981;--warn:#f59e0b;--danger:#ef4444;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Helvetica Neue',Arial,'Hiragino Kaku Gothic Pro',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+
+/* header */
+header{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);color:#fff;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{display:flex;align-items:baseline;gap:10px}
+.logo h1{font-size:1.6rem;font-weight:800;letter-spacing:.06em}
+.logo span{font-size:.78rem;opacity:.7}
+nav{display:flex;gap:6px}
+.nav-link{color:rgba(255,255,255,.7);text-decoration:none;padding:5px 13px;border-radius:6px;font-size:.8rem;transition:all .15s}
+.nav-link:hover,.nav-link.active{background:rgba(255,255,255,.18);color:#fff}
+
+/* layout */
+.wrap{max-width:1400px;margin:0 auto;padding:20px 14px}
+.sim-layout{display:flex;gap:16px;align-items:flex-start}
+.panel-l{width:310px;min-width:270px;position:sticky;top:14px;display:flex;flex-direction:column;gap:12px}
+.panel-r{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+
+/* card */
+.card{background:var(--card);border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.ctitle{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px}
+
+/* genre filter */
+.genre-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.gbtn{padding:4px 10px;border:1px solid var(--border);border-radius:13px;background:#fff;cursor:pointer;font-size:.73rem;color:var(--muted);transition:all .15s;font-family:inherit}
+.gbtn:hover{border-color:var(--primary);color:var(--primary)}
+.gbtn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* search */
+.srch{width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:7px;font-size:.875rem;outline:none;font-family:inherit;margin-bottom:9px}
+.srch:focus{border-color:var(--primary)}
+
+/* talent list */
+.tlist{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:7px}
+.ti{padding:8px 11px;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.ti:last-child{border-bottom:none}
+.ti:hover{background:#f0f7ff}
+.ti.sel{background:var(--primary-light)}
+.ti.dis{opacity:.38;cursor:not-allowed;pointer-events:none}
+.ti-name{font-weight:600;font-size:.84rem}
+.ti-sub{font-size:.7rem;color:var(--muted)}
+.ti-score{font-size:.73rem;font-weight:600;color:var(--primary);background:var(--primary-light);padding:2px 6px;border-radius:7px;margin-left:auto;white-space:nowrap}
+.ti.sel .ti-score{background:rgba(255,255,255,.6)}
+
+/* chips */
+.chips-hd{font-size:.74rem;color:var(--muted);font-weight:600;margin-bottom:7px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;min-height:28px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--primary);color:#fff;border-radius:14px;padding:3px 9px 3px 11px;font-size:.76rem;font-weight:500}
+.chip-x{background:none;border:none;color:rgba(255,255,255,.75);cursor:pointer;font-size:.95rem;line-height:1;padding:0}
+.chip-x:hover{color:#fff}
+.chips-empty{font-size:.76rem;color:#cbd5e1;font-style:italic;align-self:center}
+
+/* settings */
+.sg{margin-bottom:13px}
+.sg:last-child{margin-bottom:0}
+.slbl{font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:7px;display:block}
+.rg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rb{display:flex;align-items:center;gap:7px;padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;transition:all .15s;font-size:.82rem;font-family:inherit;background:#fff;text-align:left;color:var(--text)}
+.rb:hover{border-color:var(--primary)}
+.rb.on{border-color:var(--primary);background:var(--primary-light);color:var(--primary);font-weight:600}
+.rdot{width:13px;height:13px;border-radius:50%;border:2px solid currentColor;flex-shrink:0;position:relative}
+.rb.on .rdot::after{content:'';position:absolute;top:2px;left:2px;width:5px;height:5px;background:var(--primary);border-radius:50%}
+
+/* simulate button */
+.sim-btn{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:.95rem;font-weight:700;cursor:pointer;transition:background .15s;font-family:inherit;letter-spacing:.03em}
+.sim-btn:hover:not(:disabled){background:var(--primary-dark)}
+.sim-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* metric row */
+.m-row{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.mc{background:var(--card);border-radius:10px;padding:13px 15px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.mc .ml{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.mc .mv{font-size:1.35rem;font-weight:800;color:var(--primary);margin-top:4px;line-height:1.1}
+.mc .ms{font-size:.7rem;color:var(--muted);margin-top:3px}
+.risk-low{color:var(--success)!important}
+.risk-mid{color:var(--warn)!important}
+.risk-high{color:var(--danger)!important}
+.unit{font-size:.65em;font-weight:400}
+
+/* demographics */
+.demo-legend{display:flex;gap:14px;margin-bottom:9px;font-size:.74rem}
+.ldot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+.demo-grid{display:grid;gap:5px}
+.demo-row{display:grid;grid-template-columns:52px 1fr 44px 1fr 52px;align-items:center;gap:6px}
+.d-age{font-size:.73rem;font-weight:600;color:var(--muted);text-align:center}
+.d-wrap{height:13px;background:var(--bg);border-radius:3px;overflow:hidden}
+.d-bm{height:100%;background:#2563eb;border-radius:3px;transition:width .5s ease}
+.d-bf{height:100%;background:#ec4899;border-radius:3px;transition:width .5s ease}
+.d-pct{font-size:.7rem;font-weight:600;white-space:nowrap}
+.d-pct-m{color:#2563eb;text-align:right}
+.d-pct-f{color:#ec4899;text-align:left}
+
+/* talent score cards */
+.tc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.tc{background:var(--bg);border-radius:8px;padding:12px;border:1px solid var(--border)}
+.tc-name{font-weight:700;font-size:.84rem;margin-bottom:6px}
+.tc-tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:.68rem;font-weight:500;background:var(--primary-light);color:var(--primary);margin-bottom:8px}
+.tc-row{display:flex;justify-content:space-between;font-size:.74rem;padding:2px 0;border-bottom:1px solid var(--border)}
+.tc-row:last-of-type{border-bottom:none}
+.tc-k{color:var(--muted)}
+.tc-v{font-weight:600}
+.tc-score-box{text-align:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+.tc-big{font-size:1.45rem;font-weight:800;color:var(--primary)}
+.tc-slbl{font-size:.68rem;color:var(--muted)}
+
+/* fit bar */
+.fit-bar-wrap{background:var(--border);border-radius:3px;height:5px;margin-top:3px;overflow:hidden}
+.fit-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,#2563eb,#7c3aed);transition:width .5s}
+
+/* export */
+.exp-row{display:flex;gap:10px}
+.exp-btn{flex:1;padding:10px 14px;border-radius:7px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:.82rem;font-weight:600;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text)}
+.exp-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+/* print */
+@media print{
+  header,.panel-l,.settings-card,.sim-btn-wrap,.exp-row,nav{display:none!important}
+  .sim-layout{display:block}
+  body{background:#fff}
+  .m-row{grid-template-columns:repeat(4,1fr)}
+}
+
+/* responsive */
+@media(max-width:900px){
+  .sim-layout{flex-direction:column}
+  .panel-l{width:100%;position:static}
+  .m-row{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+  .m-row{grid-template-columns:1fr 1fr}
+  .rg{grid-template-columns:1fr 1fr}
+  header{padding:12px 16px}
+  .logo h1{font-size:1.25rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <h1>CastScope</h1>
+    <span>キャスティングシミュレーター</span>
+  </div>
+  <nav>
+    <a href="./index.html" class="nav-link">ダッシュボード</a>
+    <a href="./simulator.html" class="nav-link active">シミュレーター</a>
+  </nav>
+</header>
+
+<div class="wrap">
+<div class="sim-layout">
+
+  <!-- ── Left: Talent Selection ── -->
+  <aside class="panel-l">
+    <div class="card">
+      <div class="ctitle">タレントを選ぶ（最大5人）</div>
+      <div class="genre-row" id="genre-row">
+        <button class="gbtn on" data-g="all">すべて</button>
+      </div>
+      <input class="srch" id="q" type="text" placeholder="名前で検索…">
+      <div class="tlist" id="tlist">
+        <div style="padding:20px;text-align:center;color:#94a3b8;font-size:.82rem">読み込み中…</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chips-hd">選択中 <span id="sel-count">0</span>/5</div>
+      <div class="chips" id="chips">
+        <span class="chips-empty">タレントを選択してください</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Right ── -->
+  <div class="panel-r">
+
+    <!-- Settings -->
+    <div class="card settings-card">
+      <div class="ctitle">番組設定</div>
+      <div class="sg">
+        <span class="slbl">フォーマット</span>
+        <div class="rg" id="fmt-g">
+          <button class="rb on" data-v="drama">  <span class="rdot"></span>ドラマ</button>
+          <button class="rb" data-v="variety"><span class="rdot"></span>バラエティ</button>
+          <button class="rb" data-v="movie">  <span class="rdot"></span>映画</button>
+          <button class="rb" data-v="streaming"><span class="rdot"></span>配信</button>
+        </div>
+      </div>
+      <div class="sg">
+        <span class="slbl">放送時間帯</span>
+        <div class="rg" id="slot-g">
+          <button class="rb on" data-v="prime">  <span class="rdot"></span>プライム</button>
+          <button class="rb" data-v="noon">   <span class="rdot"></span>昼</button>
+          <button class="rb" data-v="late">   <span class="rdot"></span>深夜</button>
+          <button class="rb" data-v="holiday"><span class="rdot"></span>休日午後</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sim-btn-wrap">
+      <button class="sim-btn" id="sim-btn" disabled>タレントを選択してください</button>
+    </div>
+
+    <!-- Results (hidden until simulated) -->
+    <div id="results" style="display:none">
+
+      <div class="m-row" id="m-row"></div>
+
+      <div class="card">
+        <div class="ctitle">年代 × 性別　視聴意向マップ</div>
+        <div class="demo-legend">
+          <span><span class="ldot" style="background:#2563eb"></span>男性</span>
+          <span><span class="ldot" style="background:#ec4899"></span>女性</span>
+        </div>
+        <div class="demo-grid" id="demo-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle">タレント個別スコアカード</div>
+        <div class="tc-grid" id="tc-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle">レポート出力</div>
+        <div class="exp-row">
+          <button class="exp-btn" id="btn-png">📷 PNG 保存</button>
+          <button class="exp-btn" id="btn-pdf">🖨 PDF 出力</button>
+        </div>
+      </div>
+
+    </div><!-- /results -->
+  </div><!-- /panel-r -->
+</div><!-- /sim-layout -->
+</div><!-- /wrap -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+  integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+// ── 定数 ──────────────────────────────────────────────────
+const FMT_MULT  = {drama:1.0, variety:0.85, movie:0.92, streaming:0.72};
+const SLOT_MULT = {prime:1.0, noon:0.50, late:0.36, holiday:0.70};
+const FMT_LBL   = {drama:'ドラマ', variety:'バラエティ', movie:'映画', streaming:'配信'};
+const SLOT_LBL  = {prime:'プライム', noon:'昼', late:'深夜', holiday:'休日午後'};
+
+// ジャンル × フォーマット適性スコア（0-100）
+const FMT_FIT = {
+  drama:     {'女優':90,'俳優':90,'ジャニーズ系':70,'女性アイドル':55,'歌手・アーティスト':62,'バラエティ':45,'お笑い芸人':42,'若手・注目株':76},
+  variety:   {'女優':60,'俳優':55,'ジャニーズ系':76,'女性アイドル':66,'歌手・アーティスト':65,'バラエティ':95,'お笑い芸人':92,'若手・注目株':70},
+  movie:     {'女優':85,'俳優':92,'ジャニーズ系':70,'女性アイドル':55,'歌手・アーティスト':60,'バラエティ':52,'お笑い芸人':48,'若手・注目株':76},
+  streaming: {'女優':80,'俳優':80,'ジャニーズ系':82,'女性アイドル':76,'歌手・アーティスト':76,'バラエティ':65,'お笑い芸人':65,'若手・注目株':92},
+};
+
+// ジャンル別 視聴意向（年代×性別）
+const GENRE_DEMO = {
+  '女優':             {M10:20,M20:28,M30:36,M40:33,M50:28, F10:46,F20:73,F30:71,F40:59,F50:43},
+  '俳優':             {M10:18,M20:25,M30:41,M40:43,M50:39, F10:51,F20:79,F30:71,F40:49,F50:33},
+  'バラエティ':       {M10:30,M20:49,M30:63,M40:66,M50:65, F10:32,F20:49,F30:59,F40:63,F50:65},
+  'ジャニーズ系':     {M10:22,M20:15,M30:10,M40:8, M50:5,  F10:89,F20:93,F30:69,F40:43,F50:29},
+  '女性アイドル':     {M10:73,M20:83,M30:66,M40:46,M50:22, F10:63,F20:53,F30:39,F40:26,F50:15},
+  '歌手・アーティスト':{M10:39,M20:53,M30:56,M40:46,M50:36, F10:53,F20:69,F30:63,F40:53,F50:43},
+  'お笑い芸人':       {M10:43,M20:59,M30:63,M40:63,M50:56, F10:39,F20:53,F30:59,F40:59,F50:53},
+  '若手・注目株':     {M10:53,M20:43,M30:31,M40:19,M50:10, F10:73,F20:79,F30:59,F40:36,F50:20},
+};
+const DEMO_DEF = {M10:36,M20:46,M30:51,M40:49,M50:43, F10:49,F20:59,F30:56,F40:51,F50:41};
+
+// ── 状態 ──────────────────────────────────────────────────
+let allT = [], selT = [], genre = 'all';
+let fmt = 'drama', slot = 'prime';
+
+// ── データ読み込み ─────────────────────────────────────────
+fetch('./scores.json')
+  .then(r => { if (!r.ok) throw r.status; return r.json(); })
+  .then(d => {
+    allT = d.talents;
+    buildGenreBtns();
+    filterList();
+  })
+  .catch(() => {
+    document.getElementById('tlist').innerHTML =
+      '<div style="padding:20px;text-align:center;color:#ef4444;font-size:.82rem">scores.json の読み込みに失敗しました</div>';
+  });
+
+function buildGenreBtns() {
+  const row = document.getElementById('genre-row');
+  [...new Set(allT.map(t => t.genre))].forEach(g => {
+    const b = document.createElement('button');
+    b.className = 'gbtn'; b.dataset.g = g; b.textContent = g;
+    b.onclick = () => setGenre(g);
+    row.appendChild(b);
+  });
+  row.querySelector('[data-g="all"]').onclick = () => setGenre('all');
+}
+
+function setGenre(g) {
+  genre = g;
+  document.querySelectorAll('.gbtn').forEach(b => b.classList.toggle('on', b.dataset.g === g));
+  filterList();
+}
+
+function filterList() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const list = allT.filter(t => {
+    if (genre !== 'all' && t.genre !== genre) return false;
+    if (q && !t.name.includes(q) && !(t.name_en || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const el = document.getElementById('tlist');
+  if (!list.length) {
+    el.innerHTML = '<div style="padding:14px;text-align:center;color:#94a3b8;font-size:.8rem">該当なし</div>';
+    return;
+  }
+  el.innerHTML = list.slice(0, 100).map(t => {
+    const isSel = selT.some(s => s.id === t.id);
+    const isFull = !isSel && selT.length >= 5;
+    const sc = t.latest?.score ?? '–';
+    return `<div class="ti${isSel?' sel':''}${isFull?' dis':''}" data-id="${t.id}">
+      <div><div class="ti-name">${t.name}</div><div class="ti-sub">${t.genre}</div></div>
+      <span class="ti-score">${sc}</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.ti:not(.dis)').forEach(e => {
+    e.onclick = () => toggleT(+e.dataset.id);
+  });
+}
+
+function toggleT(id) {
+  const idx = selT.findIndex(s => s.id === id);
+  if (idx >= 0) { selT.splice(idx, 1); }
+  else {
+    if (selT.length >= 5) return;
+    const t = allT.find(t => t.id === id);
+    if (t) selT.push(t);
+  }
+  filterList();
+  renderChips();
+  updateBtn();
+}
+
+function renderChips() {
+  const el = document.getElementById('chips');
+  document.getElementById('sel-count').textContent = selT.length;
+  if (!selT.length) {
+    el.innerHTML = '<span class="chips-empty">タレントを選択してください</span>';
+    return;
+  }
+  el.innerHTML = selT.map(t =>
+    `<span class="chip">${t.name}<button class="chip-x" data-id="${t.id}">×</button></span>`
+  ).join('');
+  el.querySelectorAll('.chip-x').forEach(b => { b.onclick = () => toggleT(+b.dataset.id); });
+}
+
+function updateBtn() {
+  const btn = document.getElementById('sim-btn');
+  btn.disabled = !selT.length;
+  btn.textContent = selT.length ? `${selT.length}人でシミュレーション実行` : 'タレントを選択してください';
+}
+
+// ── ラジオ切り替え ─────────────────────────────────────────
+['fmt-g','slot-g'].forEach(gid => {
+  document.getElementById(gid).querySelectorAll('.rb').forEach(b => {
+    b.onclick = () => {
+      document.getElementById(gid).querySelectorAll('.rb').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      if (gid === 'fmt-g') fmt = b.dataset.v; else slot = b.dataset.v;
+    };
+  });
+});
+
+document.getElementById('q').addEventListener('input', filterList);
+document.getElementById('sim-btn').onclick = simulate;
+
+// ── 計算ロジック ───────────────────────────────────────────
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+const fmt2 = n => n == null ? '–' : Number(n).toLocaleString('ja-JP');
+
+function simulate() {
+  if (!selT.length) return;
+
+  const scores = selT.map(t => t.latest?.score ?? 0);
+  const base   = avg(scores);
+  const fm     = FMT_MULT[fmt],  sm = SLOT_MULT[slot];
+
+  /* 1. 推定視聴率 / 注目度 */
+  const br   = (base / 100) * 14.5 * fm * sm + 0.6;
+  const rLo  = Math.max(0.3, br * 0.82).toFixed(1);
+  const rHi  = Math.min(25, br * 1.18).toFixed(1);
+  const isTV = fmt === 'drama' || fmt === 'variety';
+  const rLbl = isTV ? '推定視聴率' : '推定注目度';
+  const rUnit= isTV ? '%' : 'pt';
+
+  /* 2. SNSバズスコア */
+  const buzz = Math.round(clamp(avg(selT.map(t => {
+    const l = t.latest; let s=0,w=0;
+    if (l.trend_score   != null) { s += l.trend_score*35; w+=35; }
+    if (l.yt_avg_views  != null) { s += clamp(Math.log10(l.yt_avg_views+1)/6*100,0,100)*35; w+=35; }
+    if (l.news_count    != null) { s += clamp(l.news_count/3,0,100)*20; w+=20; }
+    if (l.wiki_pageviews!= null) { s += clamp(l.wiki_pageviews/1000,0,100)*10; w+=10; }
+    return w > 0 ? s/w : 0;
+  })), 0, 100));
+
+  /* 3. 相性スコア */
+  const uniqGenre   = [...new Set(selT.map(t=>t.genre))].length;
+  const diverseBonus= Math.min((uniqGenre-1)*12, 24);
+  const variance    = avg(scores.map(s=>(s-base)**2));
+  const balance     = clamp(28 - variance/22, 0, 28);
+  const fitAvg      = avg(selT.map(t => FMT_FIT[fmt]?.[t.genre] ?? 55));
+  const compat      = Math.round(clamp(18 + diverseBonus + balance + fitAvg*0.28, 0, 99));
+
+  /* 4. 炎上リスク */
+  const riskVal = avg(selT.map(t => {
+    const trend = t.latest.trend_score ?? 10;
+    const news  = t.latest.news_count  ?? 50;
+    return news / Math.max(trend, 4);
+  }));
+  const riskKey = riskVal > 9 ? 'high' : riskVal > 4.5 ? 'mid' : 'low';
+  const RLBL = {high:'高',mid:'中',low:'低'};
+
+  /* 5. デモグラフィック */
+  const AGES  = ['10代','20代','30代','40代','50代+'];
+  const MK    = ['M10','M20','M30','M40','M50'];
+  const FK    = ['F10','F20','F30','F40','F50'];
+  const demoM = MK.map(k => {
+    let v = avg(selT.map(t=>(GENRE_DEMO[t.genre]??DEMO_DEF)[k]??40));
+    if (fmt==='drama')     v *= 0.92;
+    if (fmt==='variety')   v *= 1.08;
+    if (fmt==='streaming') v *= k.endsWith('10')||k.endsWith('20') ? 1.1 : 0.88;
+    return Math.round(clamp(v, 3, 99));
+  });
+  const demoF = FK.map(k => {
+    let v = avg(selT.map(t=>(GENRE_DEMO[t.genre]??DEMO_DEF)[k]??40));
+    if (fmt==='drama')     v *= 1.08;
+    if (fmt==='variety')   v *= 0.93;
+    if (fmt==='streaming') v *= k.endsWith('10')||k.endsWith('20') ? 1.1 : 0.88;
+    return Math.round(clamp(v, 3, 99));
+  });
+
+  // ── 描画 ─────────────────────────────────────────────────
+  /* Metric cards */
+  document.getElementById('m-row').innerHTML = `
+    <div class="mc">
+      <div class="ml">${rLbl}</div>
+      <div class="mv">${rLo}〜${rHi}<span class="unit">${rUnit}</span></div>
+      <div class="ms">${FMT_LBL[fmt]} / ${SLOT_LBL[slot]}</div>
+    </div>
+    <div class="mc">
+      <div class="ml">SNSバズスコア</div>
+      <div class="mv">${buzz}<span class="unit">/100</span></div>
+      <div class="ms">ソーシャル期待値</div>
+    </div>
+    <div class="mc">
+      <div class="ml">相性スコア</div>
+      <div class="mv">${compat}<span class="unit">/100</span></div>
+      <div class="ms">キャスト相関</div>
+    </div>
+    <div class="mc">
+      <div class="ml">炎上リスク</div>
+      <div class="mv risk-${riskKey}">${RLBL[riskKey]}</div>
+      <div class="ms">ネガティブ露出</div>
+    </div>`;
+
+  /* Demographics */
+  document.getElementById('demo-grid').innerHTML = AGES.map((age,i) => `
+    <div class="demo-row">
+      <div class="d-pct d-pct-m">${demoM[i]}%</div>
+      <div class="d-wrap" style="direction:rtl"><div class="d-bm" style="width:${demoM[i]}%"></div></div>
+      <div class="d-age">${age}</div>
+      <div class="d-wrap"><div class="d-bf" style="width:${demoF[i]}%"></div></div>
+      <div class="d-pct d-pct-f">${demoF[i]}%</div>
+    </div>`).join('');
+
+  /* Talent cards */
+  document.getElementById('tc-grid').innerHTML = selT.map(t => {
+    const l   = t.latest;
+    const fit = FMT_FIT[fmt]?.[t.genre] ?? 55;
+    return `<div class="tc">
+      <div class="tc-name">${t.name}</div>
+      <div class="tc-tag">${t.genre}</div>
+      <div class="tc-row"><span class="tc-k">Trends</span><span class="tc-v">${fmt2(l.trend_score)}</span></div>
+      <div class="tc-row"><span class="tc-k">YT avg</span><span class="tc-v">${fmt2(l.yt_avg_views)}</span></div>
+      <div class="tc-row"><span class="tc-k">News</span><span class="tc-v">${fmt2(l.news_count)}</span></div>
+      <div class="tc-row"><span class="tc-k">Wiki PV</span><span class="tc-v">${fmt2(l.wiki_pageviews)}</span></div>
+      <div class="tc-row">
+        <span class="tc-k">フォーマット適性</span>
+        <span class="tc-v">${fit}</span>
+      </div>
+      <div class="fit-bar-wrap"><div class="fit-bar" style="width:${fit}%"></div></div>
+      <div class="tc-score-box">
+        <div class="tc-big">${l.score ?? '–'}</div>
+        <div class="tc-slbl">SNSスコア</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const el = document.getElementById('results');
+  el.style.display = 'block';
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── エクスポート ──────────────────────────────────────────
+document.getElementById('btn-pdf').onclick = () => window.print();
+
+document.getElementById('btn-png').onclick = () => {
+  const el = document.getElementById('results');
+  if (typeof html2canvas === 'undefined') {
+    alert('html2canvas の読み込みに失敗しました。ネット接続を確認してください。');
+    return;
+  }
+  html2canvas(el, {scale:2, backgroundColor:'#f1f5f9', useCORS:true, logging:false})
+    .then(canvas => {
+      const a = document.createElement('a');
+      a.download = `castscope_sim_${new Date().toISOString().slice(0,10)}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+};
+</script>
+</body>
+</html>
