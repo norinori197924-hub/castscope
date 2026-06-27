@@ -86,6 +86,13 @@ td{padding:10px 13px;vertical-align:middle}
 /* fav bar */
 .fav-bar{background:var(--bg);border-radius:3px;height:5px;margin-top:4px;overflow:hidden;min-width:70px}
 .fav-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#10b981,#06b6d4)}
+/* PAT row */
+.pat-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.pat-input{flex:1;min-width:220px;padding:7px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:.8rem;outline:none;font-family:inherit;color:var(--text)}
+.pat-input:focus{border-color:var(--primary)}
+.pat-chk{display:flex;align-items:center;gap:5px;font-size:.78rem;color:var(--muted);cursor:pointer;white-space:nowrap}
+.pat-chk input{cursor:pointer;accent-color:var(--primary)}
+.pat-hint{font-size:.72rem;color:var(--muted)}
 
 /* mobile */
 @media(max-width:700px){
@@ -137,6 +144,11 @@ td{padding:10px 13px;vertical-align:middle}
         <input type="file" id="raw-file" accept=".txt">
       </label>
       <button class="upload-btn" id="upload-btn">アップロードして反映</button>
+    </div>
+    <div class="pat-row">
+      <input type="password" id="pat-input" class="pat-input" placeholder="GitHub Personal Access Token（省略可）">
+      <label class="pat-chk"><input type="checkbox" id="pat-save"> このブラウザに保存する</label>
+      <span class="pat-hint">入力すると好感度スコアを docs/favor_scores.json へ自動コミットします</span>
     </div>
     <div class="upload-msg" id="upload-msg"></div>
   </div>
@@ -272,6 +284,45 @@ document.querySelectorAll('th[data-k]').forEach(th=>{
 
 document.getElementById('q').addEventListener('input', render);
 
+// ── PAT 永続化 ──────────────────────────────────────────────
+(function initPat(){
+  const saved = localStorage.getItem('cs_pat');
+  if(saved){ document.getElementById('pat-input').value = saved; document.getElementById('pat-save').checked = true; }
+})();
+
+// ── favor_scores.json 初期ロード ────────────────────────────
+fetch('./favor_scores.json')
+  .then(r => r.ok ? r.json() : null)
+  .then(d => { if(d && d.scores){ favMap = d.scores; render(); } })
+  .catch(() => {});
+
+// ── GitHub コミット ─────────────────────────────────────────
+function toBase64(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+
+async function commitFavScores(pat, scores){
+  const repo = 'norinori197924-hub/castscope';
+  const path = 'docs/favor_scores.json';
+  const apiUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+  const headers = { 'Authorization': `token ${pat}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+
+  let sha;
+  const getRes = await fetch(apiUrl, { headers });
+  if(getRes.ok){ sha = (await getRes.json()).sha; }
+  else if(getRes.status !== 404){ throw new Error(`GitHub GET ${getRes.status}`); }
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString().slice(0,19).replace('T',' '), scores }, null, 2);
+  const body = { message: `data: update favor_scores.json (${new Date().toISOString().slice(0,10)})`, content: toBase64(payload), ...(sha ? { sha } : {}) };
+
+  const putRes = await fetch(apiUrl, { method:'PUT', headers, body: JSON.stringify(body) });
+  if(!putRes.ok){ const e = await putRes.json(); throw new Error(e.message || `HTTP ${putRes.status}`); }
+  return putRes.json();
+}
+
 // ── アップロード ────────────────────────────────────────────
 let lytFile = null, rwFile = null;
 
@@ -387,27 +438,48 @@ function setMsg(text,type){
   el.className='upload-msg '+(type==='ok'?'msg-ok':'msg-err');
 }
 
-document.getElementById('upload-btn').addEventListener('click',()=>{
+document.getElementById('upload-btn').addEventListener('click', async () => {
   if(!lytFile||!rwFile){ setMsg('2つのファイルを選択してください','err'); return; }
-  const btn=document.getElementById('upload-btn');
-  btn.disabled=true; btn.textContent='解析中…';
-  Promise.all([readText(lytFile),readText(rwFile)]).then(([lt,rt])=>{
-    const layoutRows=parseLayout(lt);
-    const rawData=parseRaw(rt);
-    const names=all.map(t=>t.name);
-    const {scores,question,matched,total}=calcFav(layoutRows,rawData,names);
-    if(matched===0){
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true; btn.textContent = '解析中…';
+
+  try {
+    const [lt, rt] = await Promise.all([readText(lytFile), readText(rwFile)]);
+    const layoutRows = parseLayout(lt);
+    const rawData    = parseRaw(rt);
+    const names      = all.map(t => t.name);
+    const { scores, question, matched, total } = calcFav(layoutRows, rawData, names);
+
+    if(matched === 0){
       setMsg('タレント名が一致するデータが見つかりませんでした。レイアウトのアイテム名を確認してください。','err');
       return;
     }
-    favMap=scores;
+
+    favMap = scores;
     render();
-    setMsg(`✓ ${total} サンプル ／ ${matched} タレント分の好感度スコアを反映しました（${question}）`,'ok');
-  }).catch(e=>{
-    setMsg('解析に失敗しました: '+e.message,'err');
-  }).finally(()=>{
-    btn.disabled=false; btn.textContent='アップロードして反映';
-  });
+    setMsg(`✓ ${total} サンプル ／ ${matched} タレント分の好感度スコアを反映しました（${question}）`, 'ok');
+
+    // PAT 保存
+    const pat     = document.getElementById('pat-input').value.trim();
+    const doSave  = document.getElementById('pat-save').checked;
+    if(doSave && pat) localStorage.setItem('cs_pat', pat);
+    else if(!doSave)  localStorage.removeItem('cs_pat');
+
+    // GitHub コミット
+    if(pat){
+      setMsg(`✓ ${total} サンプル ／ ${matched} タレント分を反映。GitHub へコミット中…`, 'ok');
+      try {
+        await commitFavScores(pat, scores);
+        setMsg(`✓ ${total} サンプル ／ ${matched} タレント分を反映し、favor_scores.json をコミットしました`, 'ok');
+      } catch(e){
+        setMsg(`好感度反映は成功。GitHub コミット失敗: ${e.message}`, 'err');
+      }
+    }
+  } catch(e){
+    setMsg('解析に失敗しました: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'アップロードして反映';
+  }
 });
 </script>
 </body>
