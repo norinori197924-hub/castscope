@@ -959,141 +959,180 @@ function simulate() {
   el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-// ── AI 考察（リッチ版）────────────────────────────────────
-function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, demoM, demoF, uniqGenre, avgFav, rLo, rHi, mediaLbl, contextLbl, isTV, rLbl, rUnit }) {
-  const AGES = ['10代','20代','30代','40代','50代'];
+// ── AI 考察（3層構造）────────────────────────────────────
+function generateInsights({ buzz, compat, riskKey, avgFit, demoM, demoF, avgFav, rLo, rHi, mediaLbl, rLbl, rUnit }) {
 
-  // テキスト装飾ヘルパー
-  const nm  = n => `<span class="ins-nm">「${n}」</span>`;
+  // デコレーターヘルパー
   const hl  = v => `<span class="ins-hl">${v}</span>`;
   const hlg = v => `<span class="ins-hlg">${v}</span>`;
   const hlr = v => `<span class="ins-hlr">${v}</span>`;
   const hla = v => `<span class="ins-hla">${v}</span>`;
-  const pct = v => `<span class="ins-num">${v}%</span>`;
+  const nm  = n => `<span class="ins-nm">「${n}」</span>`;
 
-  const insRLbl = isTV ? '視聴率' : rLbl.replace('推定','');
+  // 指標集計（グローバルの selT から直接取得）
+  const safeAvg = key => {
+    const vals = selT.map(t => t.latest?.[key]).filter(v => v != null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  };
+  const avgSentiment = safeAvg('news_sentiment');
+  const avgTrend     = safeAvg('trend_score');
+  const avgYtSubs    = safeAvg('yt_subscribers');
+  const avgYtViews   = safeAvg('yt_avg_views');
+  const avgNewsCount = safeAvg('news_count');
+  const avgWikiPv    = safeAvg('wiki_pageviews');
 
-  const fSum     = demoF.reduce((a,b) => a+b, 0);
-  const mSum     = demoM.reduce((a,b) => a+b, 0);
-  const femaleStr = fSum > mSum;
-  const topFi    = demoF.indexOf(Math.max(...demoF));
-  const topMi    = demoM.indexOf(Math.max(...demoM));
-  const topFPct  = demoF[topFi];
-  const topMPct  = demoM[topMi];
+  const fmtYt  = v => v >= 10000 ? Math.round(v/10000)+'万' : v.toLocaleString();
+  const fmtPv  = v => v >= 1000 ? (v/1000).toFixed(1)+'k' : Math.round(v)+'';
+  const s_sent = avgSentiment != null ? Math.round(avgSentiment)+'点' : '–';
+  const s_trnd = avgTrend     != null ? Math.round(avgTrend)+'/100' : '–';
+  const s_subs = avgYtSubs    != null ? fmtYt(avgYtSubs)+'人' : '–';
+  const s_views= avgYtViews   != null ? fmtYt(avgYtViews)+'再生' : '–';
+  const s_news = avgNewsCount  != null ? Math.round(avgNewsCount)+'件' : '–';
+  const s_wiki = avgWikiPv    != null ? fmtPv(avgWikiPv)+'PV' : '–';
 
-  // 出演者情報
-  const topTalent = selT.reduce((a,b) => (a.latest?.score??0) >= (b.latest?.score??0) ? a : b);
-  const names5    = selT.slice(0,3).map(t => nm(t.name)).join('・') + (selT.length > 3 ? `ほか${selT.length-3}名` : '');
-  const genreSet  = [...new Set(selT.map(t => t.genre))];
-  const avgTrend  = avg(selT.map(t => t.latest?.trend_score ?? 0));
+  // ── Layer 1: メディア適性評価 ─────────────────────────────
+  const L1 = [];
 
-  // ── ① キャスティング総評 ────────────────────────────────
-  let s1 = '';
-
-  if (stars >= 2) {
-    s1 += `${contextLbl}として、${nm(topTalent.name)}を筆頭に主演クラス${hl(stars+'名')}が揃う強力なキャスティングです。`;
-    s1 += `複数の主演級が並ぶ布陣は、過去の${mediaLbl}でも初回から高い数字を記録した作品に共通するパターンであり、`;
-    s1 += uniqGenre >= 3
-      ? `さらに${genreSet.join('・')}と多彩なジャンル構成が加わることで、コアファン以外の幅広い層へのクロスオーバー訴求が期待できます。`
-      : `${genreSet[0]}ジャンルのコアファンを核に据えながら、スコア帯の安定感でクライアントにも説明しやすい布陣となっています。`;
-    if (femaleStr) s1 += `特に${AGES[topFi]}女性層（意向${pct(topFPct)}）への訴求が突出しており、F2・F3層をターゲットとするスポンサーへのアピール材料になります。`;
-    else           s1 += `男女ともにバランスよく届く構成で、幅広いリーチの引き上げが狙えます。`;
-  } else if (stars === 1 && mids >= 1) {
-    s1 += `${contextLbl}として、${nm(topTalent.name)}が看板を張り、実力派中堅${mids}名がサポートする王道キャスティングです。`;
-    s1 += `看板1名＋中堅複数という構成は安定性が高く、クライアントからの信頼も得やすい鉄板パターンです。`;
-    s1 += femaleStr
-      ? `${AGES[topFi]}女性（意向${pct(topFPct)}）を中核ターゲットに置きながら、中堅陣の多様性で副次的な層にも届く奥行きがあります。`
-      : `男性層（トップ${AGES[topMi]} ${pct(topMPct)}）も取り込みやすく、幅広い層への到達が見込めます。`;
-  } else if (young >= 3) {
-    s1 += `${contextLbl}として、フレッシュな若手タレント中心の攻めたキャスティングです。`;
-    s1 += `若手起用はコスト面での優位性とともに、Z世代・若年層からの新規ファン獲得という大きな可能性を秘めています。`;
-    s1 += (mediaType === 'sns' || mediaType === 'web')
-      ? `デジタルプラットフォームならではのバイラル需要とも相性が良く、SNS世代が自発的に拡散するコンテンツになるポテンシャルを持っています。`
-      : `掲載・放送後のSNS拡散でロングテールの話題継続が期待でき、${mediaLbl}としての新陳代謝を促す戦略的な選択です。`;
-    if (stars === 0) s1 += `ただし実績のある看板クラスが不在なため、企画・演出の質が数字を大きく左右する点は留意が必要です。`;
-  } else if (uniqGenre >= 3) {
-    s1 += `${contextLbl}として、${genreSet.join('・')}と多彩なジャンルにまたがるクロスオーバーキャスティングです。`;
-    s1 += `単一ジャンルのファン層だけでなく複数のコミュニティにリーチできる点は、競合との明確な差別化要素になります。`;
-    s1 += `一方で世界観の統一感を保つ設計上の工夫が、このキャストの力を最大限に引き出す鍵となります。`;
-  } else {
-    s1 += `${contextLbl}として、${names5}によるバランス型キャスティングです。`;
-    s1 += `役割分担が明確で、各タレントが互いの強みを補い合う安定したラインナップです。`;
-    s1 += `特定ファン層への偏りを避けながら幅広い層を取り込む戦略として、競合環境においても手堅い選択と言えます。`;
+  switch (mediaType) {
+    case 'tv':
+      if (avgSentiment != null && avgSentiment >= 65)
+        L1.push(`感情スコアが高く（平均${hl(s_sent)}）、視聴者からの好感・共感を得やすい構成です。ドラマ視聴率への安定した貢献が期待できます。`);
+      else if (avgSentiment != null && avgSentiment <= 35)
+        L1.push(hlr('感情スコアが低め')+'（平均'+s_sent+'）です。ネガティブ報道の影響を受けやすい状態のため、放送前のパブリックイメージ管理を強化してください。');
+      if (avgTrend != null) {
+        if (avgTrend >= 60)
+          L1.push(`Trendsスコアが${hl(s_trnd)}と高く、放送期間中の話題維持力があります。SNS二次拡散による視聴促進が見込めます。`);
+        else if (avgTrend <= 25)
+          L1.push(`現時点でのTrendsは${hla(s_trnd)}と控えめですが、出演発表・放送開始による話題の再浮上効果が期待できます。`);
+      }
+      break;
+    case 'cm':
+      if (avgSentiment != null && avgSentiment >= 65)
+        L1.push(`感情スコアが高く（平均${hl(s_sent)}）、ブランドへの好感転移が生まれやすい構成です。購買意欲への直接貢献が見込めます。`);
+      else if (avgSentiment != null && avgSentiment <= 35)
+        L1.push(hlr('感情スコアが低め')+'（平均'+s_sent+'）です。炎上リスクの観点から、起用前にパブリックイメージの精査を強く推奨します。');
+      if (avgYtSubs != null && avgYtSubs >= 300000)
+        L1.push(`YouTubeチャンネル登録者数が平均${hl(s_subs)}と豊富で、WEB展開との相乗効果が高いです。デジタルCMでの費用対効果が見込めます。`);
+      break;
+    case 'movie':
+      if (avgWikiPv != null && avgWikiPv >= 500)
+        L1.push(`Wiki PVが平均${hl(s_wiki)}と高く、情報感度の高い映画ファン層への認知が既に形成されています。初動動員への貢献が期待できます。`);
+      if (avgYtViews != null && avgYtViews >= 100000)
+        L1.push(`YouTube再生数が平均${hl(s_views)}と高く、映像コンテンツでの訴求力があります。予告編拡散への貢献が見込めます。`);
+      break;
+    case 'sns':
+      if (avgYtSubs != null && avgYtSubs >= 300000)
+        L1.push(`チャンネル登録者数が平均${hl(s_subs)}と多く、フォロワー経由の有機的拡散が強いです。バズ創出のポテンシャルがあります。`);
+      if (avgYtViews != null && avgYtViews >= 100000)
+        L1.push(`YouTube再生数が平均${hl(s_views)}と高く、動画コンテンツとの親和性があります。リール・ショート動画での訴求に適しています。`);
+      break;
+    case 'newspaper':
+      if (avgNewsCount != null && avgNewsCount >= 30)
+        L1.push(`ニュース件数が平均${hl(s_news)}と豊富で、メディア露出実績があります。新聞読者層への認知が既に形成されています。`);
+      if (avgSentiment != null && avgSentiment >= 65)
+        L1.push(`感情スコアが高く（平均${hl(s_sent)}）、社会的信頼性があります。企業広告・公共広告への適性が高い構成です。`);
+      break;
+    case 'magazine':
+      if (avgSentiment != null && avgSentiment >= 65)
+        L1.push(`感情スコアが高く（平均${hl(s_sent)}）、読者との感情的つながりが強い構成です。表紙・巻頭グラビアでの購買促進が期待できます。`);
+      if (avgYtSubs != null && avgYtSubs >= 300000)
+        L1.push(`チャンネル登録者数が平均${hl(s_subs)}のクロスメディア読者を持ちます。雑誌×SNS連動企画での相乗効果が見込めます。`);
+      break;
+    case 'web':
+      if (avgTrend != null && avgTrend >= 60)
+        L1.push(`Trendsスコアが${hl(s_trnd)}と高く、検索流入との連動が強いです。タイアップ記事でのSEO効果が期待できます。`);
+      if (avgYtViews != null && avgYtViews >= 100000)
+        L1.push(`YouTube再生数が平均${hl(s_views)}と高く、動画広告との親和性があります。プレロール広告でのブランドリフトが見込めます。`);
+      break;
   }
 
-  // ── ② 指標予測の根拠 ──────────────────────────────────
-  let s2 = `${rLbl}${hl(rLo+'〜'+rHi+rUnit)}の根拠を説明します。`;
+  if (!L1.length)
+    L1.push(`${mediaLbl}起用として${hl(Math.round(avgFit)+'/100')}のメディア適性スコアを記録しています。指標バランスを踏まえた演出設計で潜在力を最大化してください。`);
 
-  if (buzz >= 72) {
-    s2 += `まずSNSバズスコアが${hl(buzz+'/100')}と非常に高く、${nm(topTalent.name)}をはじめとする各タレントの発信力が行動変容を直接後押しします。`;
-  } else if (buzz >= 48) {
-    s2 += `SNSバズスコア${hl(buzz+'/100')}は中〜高水準にあり、適切なプロモーション設計で数値の押し上げが見込めます。`;
-  } else {
-    s2 += `SNSバズスコアが${hla(buzz+'/100')}とやや控えめなため、プロモーション投資で数字を下支えすることが重要です。`;
+  // ── Layer 2: ジャンル×サブ設定の適性評価 ────────────────
+  let subKey = '', subLbl = '';
+  if (mediaType === 'tv') {
+    subKey = mediaOpts.genre || 'drama';
+    subLbl = {drama:'ドラマ',variety:'バラエティ',news:'情報・報道',sports:'スポーツ',music:'音楽'}[subKey] || subKey;
+  } else if (mediaType === 'cm') {
+    subKey = mediaOpts.category || 'food';
+    subLbl = {food:'食品・飲料',beauty:'化粧品・美容',auto:'自動車',finance:'金融',daily:'日用品',telecom:'通信',ent:'エンタメ'}[subKey] || subKey;
+  } else if (mediaType === 'movie') {
+    subKey = mediaOpts.role || 'lead';
+    subLbl = {lead:'主演',colead:'W主演',support:'助演',voice:'声優'}[subKey] || subKey;
+  } else if (mediaType === 'sns') {
+    subKey = mediaOpts.platform || 'instagram';
+    subLbl = {instagram:'Instagram',x:'X(Twitter)',tiktok:'TikTok',youtube:'YouTube',line:'LINE'}[subKey] || subKey;
+  } else if (mediaType === 'magazine') {
+    subKey = mediaOpts.genre || 'fashion';
+    subLbl = {fashion:'ファッション',weekly:'週刊誌',mens:'男性誌',womens:'女性誌',gravure:'グラビア'}[subKey] || subKey;
+  } else if (mediaType === 'newspaper') {
+    subKey = mediaOpts.medium || 'national';
+    subLbl = {national:'全国紙',sports:'スポーツ紙',local:'地方紙'}[subKey] || subKey;
+  } else if (mediaType === 'web') {
+    subKey = mediaOpts.format || 'tieup';
+    subLbl = {banner:'バナー広告',tieup:'タイアップ記事',ambassador:'ブランドアンバサダー',video:'動画広告'}[subKey] || subKey;
   }
 
-  if (avgFav != null) {
-    s2 += `調査ベースの好感度スコア（平均${hl(Math.round(avgFav)+'点')}）も算出に反映しており、`;
-    s2 += avgFav >= 62
-      ? `高い好感度は初期から安定した反応を生み出し、継続的なエンゲージメントの向上に寄与します。`
-      : `好感度の上積み余地があるため、継続露出による認知・好感の積み上げに期待がかかります。`;
-  } else {
-    s2 += `${nm(topTalent.name)}はSNSスコア${hl(topTalent.latest?.score??'–')}を持ち、初期集客の核となります。`;
+  const L2_MAP = {
+    tv_drama:     `ドラマ出演においては${hl('感情移入度')}と${hl('話題継続性')}が鍵となります。感情スコア（平均${s_sent}）はドラマへの視聴者共感の代替指標です。Wiki PVはドラマ期間中の情報検索需要を示す重要指標で、平均${s_wiki}を記録しています。`,
+    tv_variety:   `バラエティでは${hl('瞬発的な話題性')}と${hl('親近感')}が視聴率を左右します。Google Trendsの変動パターン（平均${s_trnd}）がキャラクターの面白さと相関します。SNS拡散に即応できる体制が鍵です。`,
+    tv_news:      `情報・報道番組では${hl('社会的信頼性')}と${hl('メディア露出実績')}が起用の核となります。感情スコア（平均${s_sent}）と報道件数（平均${s_news}）を総合的に判断してください。`,
+    tv_sports:    `スポーツ番組では${hl('親しみやすさ')}と${hl('エネルギー感')}が重視されます。幅広い年代のTrendsの安定性が長期コメンテーター起用の判断基準となります。`,
+    tv_music:     `音楽番組ではYouTube再生数が楽曲・パフォーマンスへの関心を示す最重要指標です。平均${hl(s_views)}を記録しています。`,
+    cm_food:      `食品CMでは${hl('親しみやすさ')}と${hl('家族層への訴求力')}が核となります。幅広い年代でのTrendsの安定性（平均${s_trnd}）が長期起用の判断基準になります。`,
+    cm_beauty:    `化粧品CMでは${hl('憧れ')}・${hl('清潔感')}・${hl('信頼性')}の三要素が購買転換に直結します。感情スコアと好感度の組み合わせが最重要指標で、感情スコアは平均${s_sent}です。`,
+    cm_auto:      `自動車CMでは${hl('信頼感')}と${hl('ステータス感')}が重要です。30〜50代男性層への訴求力と社会的信頼性の高い人選が効果を最大化します。`,
+    cm_finance:   `金融CMでは${hl('信頼性')}と${hl('安心感')}が必須要件です。感情スコア（平均${s_sent}）と炎上リスクの低さが選定の最優先基準となります。`,
+    cm_daily:     `日用品CMでは${hl('生活感')}と${hl('共感度')}が訴求の核です。主婦・ファミリー層へのデモグラフィック適合性を確認してください。`,
+    cm_telecom:   `通信CMでは${hl('先進性イメージ')}と${hl('若年層訴求力')}が重要です。チャンネル登録者数（平均${s_subs}）がデジタルネイティブ層へのリーチを示します。`,
+    cm_ent:       `エンタメCMでは${hl('話題性')}と${hl('SNS発信力')}が中核です。Trendsスコア（平均${s_trnd}）の高さが告知効果に直結します。`,
+    movie_lead:   `主演は作品の集客力に直結します。Wiki PV（平均${s_wiki}）は映画ファン層からの事前期待値、YouTube再生数（平均${s_views}）は予告編拡散力の代替指標です。`,
+    movie_colead: `W主演は2名の相性と話題の相乗効果が鍵です。両者のスコア構成のバランスと、ファン層のクロスオーバー可能性を確認してください。`,
+    movie_support:`助演は主演を引き立てる演技力と知名度バランスが重要です。適度な知名度（Trendsスコア平均${s_trnd}）と高い感情スコアの組み合わせが理想的です。`,
+    movie_voice:  `声優起用ではアニメ・ゲームファン層への訴求と、原作ファンへの説得力が重要です。SNSでの発信力が作品PRへの直接貢献となります。`,
+    magazine_fashion: `ファッション誌では${hl('ビジュアルの魅力')}と${hl('トレンド感')}が購買動機の核です。感情スコアの高さがフォロワーのエンゲージメント率に相関します。`,
+    magazine_weekly:  `週刊誌では${hl('話題性')}と${hl('ニュース性')}が掲載価値を左右します。ニュース件数（平均${s_news}）が読者関心の代替指標となります。`,
+    magazine_mens:    `男性誌では${hl('ライフスタイル訴求力')}と${hl('男性読者層への影響力')}が重要です。M2・M3層（25〜44歳男性）へのデモグラフィック適合性を確認してください。`,
+    magazine_womens:  `女性誌では${hl('共感力')}と${hl('憧れ感')}のバランスが核です。感情スコア（平均${s_sent}）がF1・F2層の購買意向に相関します。`,
+    magazine_gravure: `グラビアでは${hl('ビジュアル訴求力')}と${hl('ファン層の熱量')}が販売部数に直結します。チャンネル登録者数（平均${s_subs}）がコアファン層の規模を示す指標となります。`,
+    newspaper_national: `全国紙では${hl('社会的認知度')}と${hl('信頼性')}が最優先です。感情スコア（平均${s_sent}）の高さが企業広告起用の判断基準となります。`,
+    newspaper_sports:   `スポーツ紙では${hl('エンタメ性')}と${hl('話題性')}が重視されます。Trendsスコア（平均${s_trnd}）が掲載後の反響規模を示します。`,
+    newspaper_local:    `地方紙では${hl('地域への親しみ')}と${hl('幅広い年代への認知')}が重要です。全国的な知名度よりも親近感を重視した選定が効果的です。`,
+    sns_instagram: `Instagramでは${hl('視覚的世界観')}と${hl('F1層（20〜34歳女性）への影響力')}が核です。感情スコアの高さ（平均${s_sent}）がフォロワーのエンゲージメント率に相関します。`,
+    sns_x:         `X(Twitter)では${hl('リアルタイム話題性')}と${hl('テキスト発信力')}が重要です。TrendsスコアとニュースカバレッジがX上での言及拡散を予測する主要指標です。`,
+    sns_tiktok:    `TikTokでは${hl('15〜24歳への訴求力')}と${hl('動画バズ創出力')}が重要です。YouTube再生数の伸び率（平均${s_views}）がショート動画適性の先行指標となります。`,
+    sns_youtube:   `YouTubeでは${hl('チャンネル登録者数')}と${hl('再生維持率')}が収益性と影響力を決定します。既存チャンネル規模（平均${s_subs}）がコラボ効果を示します。`,
+    sns_line:      `LINEでは${hl('スタンプ・コンテンツへの親近感')}と${hl('ファミリー層への認知')}が重要です。幅広い年代へのTrendsの安定性が長期的なブランド価値を示します。`,
+    web_banner:    `バナー広告では${hl('視認性')}と${hl('クリック誘引力')}が成果の核です。高い感情スコアがブランドセーフティを確保し、クリック率を安定させます。`,
+    web_tieup:     `タイアップ記事では${hl('SEO連動性')}と${hl('読者への情報信頼性')}が重要です。Trendsスコア（平均${s_trnd}）との連動が検索流入を最大化します。`,
+    web_ambassador:`ブランドアンバサダーではSNS発信力の継続性が核となります。チャンネル登録者数（平均${s_subs}）が長期的なリーチ規模を保証します。`,
+    web_video:     `動画広告では${hl('再生完了率')}と${hl('ブランドリフト')}が主要KPIです。YouTube再生数（平均${s_views}）が動画コンテンツへの親和性を示します。`,
+  };
+
+  const l2Body  = L2_MAP[`${mediaType}_${subKey}`] || `${subLbl}での${mediaLbl}起用において、${hl(Math.round(avgFit)+'/100')}のメディア適性スコアを基準に指標構成を踏まえた演出設計を行ってください。`;
+  const l2Title = `${subLbl}での適性`;
+
+  // ── Layer 3: 複数タレントの組み合わせ評価（2人以上のみ）──
+  let L3_html = '';
+  if (selT.length >= 2) {
+    const scores    = selT.map(t => t.latest?.score ?? 0);
+    const scoreRange= Math.max(...scores) - Math.min(...scores);
+    const tHigh     = selT.reduce((a,b) => (a.latest?.score??0) >= (b.latest?.score??0) ? a : b);
+    const tLow      = selT.reduce((a,b) => (a.latest?.score??0) <= (b.latest?.score??0) ? a : b);
+
+    if (scoreRange < 20) {
+      L3_html += `<p>選択された${hl(selT.length+'名')}はスコア構成が近く（差分${Math.round(scoreRange)}点）、安定した視聴体験を提供できる${hl('バランス型キャスティング')}です。視聴者層の分散リスクが低い構成です。</p>`;
+    } else {
+      L3_html += `<p>話題性（${nm(tHigh.name)}）と安定感（${nm(tLow.name)}）の対比が明確で、異なる視聴者層を同時に取り込める${hl('戦略的キャスティング')}です。スコア差${Math.round(scoreRange)}点の振れ幅がコンテンツの多様性を生み出します。</p>`;
+    }
+
+    selT.filter(t => (t.latest?.news_sentiment ?? 50) <= 35).forEach(t => {
+      L3_html += `<p>${hlr('⚠️ '+t.name+'の感情スコアが'+t.latest.news_sentiment+'点と低めです。')}ブランドセーフティの観点から起用前にリスク精査を推奨します。</p>`;
+    });
   }
 
-  s2 += `${mediaLbl}適性${hl(Math.round(avgFit)+'/100')}は${avgFit >= 76 ? '非常に高く、キャスト力をフルに発揮できる条件が整っています' : avgFit >= 56 ? '良好で、企画の工夫次第でポテンシャルを最大化できます' : 'やや低めのため、コンセプト設計と演出の作り込みで補完が必要です'}。`;
-
-  // ── ③ ターゲット層分析 ──────────────────────────────────
-  const sorted_f = demoF.map((v,i)=>({age:AGES[i],pct:v})).sort((a,b)=>b.pct-a.pct);
-  const sorted_m = demoM.map((v,i)=>({age:AGES[i],pct:v})).sort((a,b)=>b.pct-a.pct);
-
-  let s3 = `コアターゲットは${hl(sorted_f[0].age+'女性')}（視聴意向${pct(sorted_f[0].pct)}）`;
-  if (femaleStr) {
-    s3 += `と${hl(sorted_f[1].age+'女性')}（${pct(sorted_f[1].pct)}）で、女性層全体が視聴の主軸を担います。`;
-    s3 += `男性層はトップが${sorted_m[0].age}（${pct(sorted_m[0].pct)}）と女性に比べて控えめですが、男女比の偏りはスポンサー選定において明確なターゲティングのしやすさに直結します。`;
-  } else {
-    s3 += `ですが、男性では${hl(sorted_m[0].age+'男性')}（視聴意向${pct(sorted_m[0].pct)}）が突出しており、男女でコアターゲットが異なる二極構造になっています。`;
-    s3 += `プロモーション施策においては、女性向けビジュアル展開と男性向けコンテンツ展開を並列で設計することで、双方のセグメントを効率よく取り込めます。`;
-  }
-
-  const mediaDemoNote = {
-    tv:        `テレビは30〜40代女性のエンゲージメントが特に高い傾向があり、本キャストはその層にダイレクトに訴求できる構成です。`,
-    cm:        `CMは視聴者の購買意欲と直結するため、20〜40代の購買力層への訴求効率が高いです。高好感度タレントの組み合わせがブランドセーフティを高めます。`,
-    movie:     `映画は20〜30代の劇場動員を主軸としつつ、配信・地上波放送の二次展開でより広い層への認知拡大が図れます。`,
-    book:      `出版はコアファン向け深掘りコンテンツとして機能し、読者層の年齢幅も広いです。フォトエッセイや対談本など多彩な展開が視認性を高めます。`,
-    newspaper: `新聞・雑誌は40代以上へのリーチに優位性があり、権威ある媒体露出がタレントのブランド価値向上に寄与します。`,
-    sns:       `SNSはフォロワーとの双方向コミュニケーションを主軸に、10〜30代への即時リーチが強みです。エンゲージメント率の高いタレント起用が拡散効果を最大化します。`,
-    web:       `Web・配信は10〜20代のヘビーユーザーが視聴の中心になるため、若年層への訴求力とSNS連動設計が継続的な作品評価を左右します。`,
-  }[mediaType] ?? '';
-  s3 += mediaDemoNote;
-
-  // ── ④ SNS・プロモーション予測 ──────────────────────────
-  let s4 = '';
-  if (buzz >= 72) {
-    s4 += `${names5}のSNS発信力は非常に高く、クランクインや主題歌解禁のタイミングでトレンド入りする可能性が高いです。`;
-    s4 += `放送日前後48時間のSNS言及急増を最大化するため、リアルタイム視聴を促す投稿テンプレートの事前配布やハッシュタグキャンペーンの設計を推奨します。`;
-  } else if (buzz >= 48) {
-    s4 += `SNSバズスコア${hl(buzz+'/100')}は中〜高水準にあり、ティザービジュアルや予告動画の戦略的リリースで放送前から話題形成が可能です。`;
-    s4 += `タレントの自己発信（インスタライブ・X投稿）と連動したキャンペーンを組み合わせることで、有機的な拡散エコシステムを構築できます。`;
-  } else {
-    s4 += `オーガニックなSNS拡散力が${hla('控えめ')}なため、メディア露出とインフルエンサー起用による外部刺激が視聴率の下支えとして重要になります。`;
-    s4 += `特にタイアップメディア・出演前特集・プレスイベントなど、認知形成に先行投資することで初回視聴のハードルを下げる設計を検討してください。`;
-  }
-
-  // ── ⑤ リスクと対策 ─────────────────────────────────────
-  let s5 = '';
-  if (riskKey === 'high') {
-    s5 += `炎上リスクを${hlr('高')}と評価しています。ニュース露出量とトレンドスコアのバランスからネガティブ報道が先行するリスクが読み取れます。`;
-    s5 += `制作サイドとして${hlr('①コメントガイドライン策定　②SNS発言研修の実施　③危機対応マニュアルの整備')}の三点を放送前に必ず完了させることを強く推奨します。問題発生時の初動対応の早さが風評被害の規模を大きく左右します。`;
-  } else if (riskKey === 'mid') {
-    s5 += `炎上リスクは${hla('中程度')}です。一部タレントで過去のネガティブ報道や評価が分かれるケースが含まれている可能性があります。`;
-    s5 += `${hla('クランクイン前のバックグラウンドチェックと広報ラインの事前確認')}を実施し、定期的なメディアモニタリング体制を整えてください。早期把握が対処コストを大幅に削減します。`;
-  } else {
-    s5 += `現指標では炎上リスクは${hlg('低')}と評価されます。ニュース露出とトレンドのバランスが取れており、ネガティブ話題が先行するリスクは現時点では限定的です。`;
-    s5 += `ただし高いSNS発信力は良い話題と悪い話題の双方を増幅させるため、${hlg('定常的なモニタリング体制は放送期間を通じて維持')}することを推奨します。`;
-  }
-
-  // ── ⑥ 総合推奨度 ──────────────────────────────────────
+  // ── 総合推奨度 ─────────────────────────────────────────────
   let starScore = 0;
   starScore += compat >= 82 ? 2.0 : compat >= 65 ? 1.5 : compat >= 50 ? 1.0 : 0.5;
   starScore += buzz   >= 72 ? 1.5 : buzz   >= 48 ? 1.0 : 0.5;
@@ -1102,7 +1141,6 @@ function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, d
   if (avgFav != null) starScore += avgFav >= 65 ? 0.2 : avgFav < 40 ? -0.2 : 0;
   const starInt = Math.max(1, Math.min(5, Math.round(starScore)));
   const starStr = '★'.repeat(starInt) + '☆'.repeat(5 - starInt);
-
   const recComments = {
     5: '即決推奨。数字・話題性・安全性の三拍子が揃っており、このまま制作に進むことを強くお勧めします。',
     4: '高推奨。主要指標が良好です。適切なプロモーション戦略を組み合わせれば高い成果が期待できます。',
@@ -1115,35 +1153,24 @@ function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, d
   const badge = (lbl, cls) => `<span class="ibadge ${cls}" style="margin-left:auto">${lbl}</span>`;
   const sections = [
     {
-      icon:'🎬', title:'キャスティング総評',
-      bdg: badge(stars>=2?`主演級${stars}名`:young>=3?'若手中心':'バランス型', stars>=2?'ib-g':young>=3?'ib-a':'ib-b'),
-      body:`<p>${s1}</p>`,
+      icon: '📡', title: `メディア適性【${mediaLbl}】`,
+      bdg:  badge(Math.round(avgFit)+'/100', avgFit >= 76 ? 'ib-g' : avgFit >= 56 ? 'ib-b' : 'ib-a'),
+      body: L1.map(l => `<p>${l}</p>`).join(''),
     },
     {
-      icon:'📊', title:'視聴率予測の根拠',
-      bdg: badge(`${rLo}〜${rHi}${rUnit}`, 'ib-b'),
-      body:`<p>${s2}</p>`,
+      icon: '🎯', title: l2Title,
+      bdg:  badge(subLbl, 'ib-b'),
+      body: `<p>${l2Body}</p>`,
     },
+    ...(selT.length >= 2 ? [{
+      icon: '🤝', title: 'キャスティング評価',
+      bdg:  badge(selT.length+'名構成', 'ib-b'),
+      body: L3_html,
+    }] : []),
     {
-      icon:'👥', title:'ターゲット層分析',
-      bdg: badge(femaleStr?`${sorted_f[0].age}女性 ${sorted_f[0].pct}%`:`${sorted_m[0].age}男性 ${sorted_m[0].pct}%`, 'ib-b'),
-      body:`<p>${s3}</p>`,
-    },
-    {
-      icon:'📱', title:'SNS・プロモーション予測',
-      bdg: badge(buzz>=72?'バズ期待大':buzz>=48?'バズ見込み':'要プロモーション強化', buzz>=72?'ib-g':buzz>=48?'ib-b':'ib-a'),
-      body:`<p>${s4}</p>`,
-    },
-    {
-      icon: riskKey==='high'?'🚨':riskKey==='mid'?'⚠️':'✅',
-      title:'リスクと対策',
-      bdg: badge({high:'高リスク',mid:'中リスク',low:'低リスク'}[riskKey], {high:'ib-r',mid:'ib-a',low:'ib-g'}[riskKey]),
-      body:`<p>${s5}</p>`,
-    },
-    {
-      icon:'🏆', title:'総合推奨度',
-      bdg:'',
-      body:`
+      icon: '🏆', title: '総合推奨度',
+      bdg: '',
+      body: `
         <div class="ins-star-row">
           <span class="ins-stars">${starStr}</span>
           <span style="font-size:.85rem;font-weight:700;color:var(--muted)">${starInt}.0 / 5.0</span>
