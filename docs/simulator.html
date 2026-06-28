@@ -73,6 +73,14 @@ nav{display:flex;gap:6px}
 .rdot{width:13px;height:13px;border-radius:50%;border:2px solid currentColor;flex-shrink:0;position:relative}
 .rb.on .rdot::after{content:'';position:absolute;top:2px;left:2px;width:5px;height:5px;background:var(--primary);border-radius:50%}
 
+/* media tabs */
+.media-tabs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:13px}
+.mtab{padding:5px 11px;border:1.5px solid var(--border);border-radius:16px;background:#fff;cursor:pointer;font-size:.77rem;color:var(--muted);transition:all .15s;font-family:inherit;font-weight:500;white-space:nowrap}
+.mtab:hover{border-color:var(--primary);color:var(--primary)}
+.mtab.on{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700}
+.sub-sg{margin-bottom:11px}
+.sub-sg:last-child{margin-bottom:0}
+
 /* simulate button */
 .sim-btn{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:.95rem;font-weight:700;cursor:pointer;transition:background .15s;font-family:inherit;letter-spacing:.03em}
 .sim-btn:hover:not(:disabled){background:var(--primary-dark)}
@@ -211,25 +219,17 @@ nav{display:flex;gap:6px}
 
     <!-- Settings -->
     <div class="card settings-card">
-      <div class="ctitle">番組設定</div>
-      <div class="sg">
-        <span class="slbl">フォーマット</span>
-        <div class="rg" id="fmt-g">
-          <button class="rb on" data-v="drama">  <span class="rdot"></span>ドラマ</button>
-          <button class="rb" data-v="variety"><span class="rdot"></span>バラエティ</button>
-          <button class="rb" data-v="movie">  <span class="rdot"></span>映画</button>
-          <button class="rb" data-v="streaming"><span class="rdot"></span>配信</button>
-        </div>
+      <div class="ctitle">メディア設定</div>
+      <div class="media-tabs" id="media-tabs">
+        <button class="mtab on" data-m="tv">📺 テレビ</button>
+        <button class="mtab" data-m="cm">📣 CM</button>
+        <button class="mtab" data-m="movie">🎬 映画</button>
+        <button class="mtab" data-m="magazine">📚 出版</button>
+        <button class="mtab" data-m="newspaper">🗞 新聞</button>
+        <button class="mtab" data-m="sns">📱 SNS</button>
+        <button class="mtab" data-m="web">🌐 WEB</button>
       </div>
-      <div class="sg">
-        <span class="slbl">放送時間帯</span>
-        <div class="rg" id="slot-g">
-          <button class="rb on" data-v="prime">  <span class="rdot"></span>プライム</button>
-          <button class="rb" data-v="noon">   <span class="rdot"></span>昼</button>
-          <button class="rb" data-v="late">   <span class="rdot"></span>深夜</button>
-          <button class="rb" data-v="holiday"><span class="rdot"></span>休日午後</button>
-        </div>
-      </div>
+      <div id="media-sub"></div>
     </div>
 
     <div class="sim-btn-wrap">
@@ -279,17 +279,148 @@ nav{display:flex;gap:6px}
 
 <script>
 // ── 定数 ──────────────────────────────────────────────────
-const FMT_MULT  = {drama:1.0, variety:0.85, movie:0.92, streaming:0.72};
-const SLOT_MULT = {prime:1.0, noon:0.50, late:0.36, holiday:0.70};
-const FMT_LBL   = {drama:'ドラマ', variety:'バラエティ', movie:'映画', streaming:'配信'};
-const SLOT_LBL  = {prime:'プライム', noon:'昼', late:'深夜', holiday:'休日午後'};
+// テレビ内サブ乗数
+const TV_GENRE_MULT = {drama:1.0, variety:0.85, news:0.72, sports:0.78, music:0.75};
+const TV_SLOT_MULT  = {prime:1.0, noon:0.50, late:0.36, morning:0.42, holiday:0.70};
 
-// ジャンル × フォーマット適性スコア（0-100）
-const FMT_FIT = {
-  drama:     {'女優':90,'俳優':90,'ジャニーズ系':70,'女性アイドル':55,'歌手・アーティスト':62,'バラエティ':45,'お笑い芸人':42,'若手・注目株':76},
-  variety:   {'女優':60,'俳優':55,'ジャニーズ系':76,'女性アイドル':66,'歌手・アーティスト':65,'バラエティ':95,'お笑い芸人':92,'若手・注目株':70},
-  movie:     {'女優':85,'俳優':92,'ジャニーズ系':70,'女性アイドル':55,'歌手・アーティスト':60,'バラエティ':52,'お笑い芸人':48,'若手・注目株':76},
-  streaming: {'女優':80,'俳優':80,'ジャニーズ系':82,'女性アイドル':76,'歌手・アーティスト':76,'バラエティ':65,'お笑い芸人':65,'若手・注目株':92},
+// メディア乗数
+const MEDIA_MULT = {tv:1.0, cm:0.88, movie:0.92, magazine:0.70, newspaper:0.65, sns:0.95, web:0.80};
+
+// メディア表示ラベル・指標名
+const MEDIA_LBL = {tv:'テレビ', cm:'CM', movie:'映画', magazine:'出版(雑誌)', newspaper:'新聞', sns:'SNS', web:'WEBサイト'};
+const MEDIA_METRIC = {
+  tv:        {lbl:'推定視聴率',   unit:'%'},
+  cm:        {lbl:'推定認知率',   unit:'pt'},
+  movie:     {lbl:'推定動員力',   unit:'pt'},
+  magazine:  {lbl:'推定話題性',   unit:'pt'},
+  newspaper: {lbl:'推定閲読効果', unit:'pt'},
+  sns:       {lbl:'推定リーチ力', unit:'pt'},
+  web:       {lbl:'推定クリック力',unit:'pt'},
+};
+
+// メディア別スコア重み
+const MEDIA_WEIGHTS = {
+  tv:       {trends:0.30, yt_views:0.20, news:0.20, wiki:0.10, sentiment:0.15, yt_subs:0.05},
+  cm:       {trends:0.25, yt_views:0.15, news:0.15, wiki:0.05, sentiment:0.30, yt_subs:0.10},
+  movie:    {trends:0.20, yt_views:0.25, news:0.20, wiki:0.15, sentiment:0.15, yt_subs:0.05},
+  magazine: {trends:0.15, yt_views:0.10, news:0.20, wiki:0.10, sentiment:0.25, yt_subs:0.20},
+  newspaper:{trends:0.20, yt_views:0.05, news:0.35, wiki:0.15, sentiment:0.20, yt_subs:0.05},
+  sns:      {trends:0.20, yt_views:0.30, news:0.10, wiki:0.05, sentiment:0.10, yt_subs:0.25},
+  web:      {trends:0.25, yt_views:0.25, news:0.15, wiki:0.10, sentiment:0.15, yt_subs:0.10},
+};
+
+// メディア × ジャンル適性スコア（0-100）
+const MEDIA_FIT = {
+  tv:       {'女優':88,'俳優':88,'ジャニーズ系':74,'女性アイドル':62,'歌手・アーティスト':65,'バラエティ':72,'お笑い芸人':78,'若手・注目株':70},
+  cm:       {'女優':85,'俳優':75,'ジャニーズ系':82,'女性アイドル':88,'歌手・アーティスト':80,'バラエティ':70,'お笑い芸人':72,'若手・注目株':78},
+  movie:    {'女優':85,'俳優':92,'ジャニーズ系':70,'女性アイドル':55,'歌手・アーティスト':60,'バラエティ':52,'お笑い芸人':48,'若手・注目株':76},
+  magazine: {'女優':90,'俳優':65,'ジャニーズ系':80,'女性アイドル':95,'歌手・アーティスト':78,'バラエティ':55,'お笑い芸人':52,'若手・注目株':82},
+  newspaper:{'女優':70,'俳優':72,'ジャニーズ系':60,'女性アイドル':55,'歌手・アーティスト':68,'バラエティ':75,'お笑い芸人':72,'若手・注目株':58},
+  sns:      {'女優':75,'俳優':72,'ジャニーズ系':88,'女性アイドル':92,'歌手・アーティスト':88,'バラエティ':65,'お笑い芸人':70,'若手・注目株':90},
+  web:      {'女優':78,'俳優':75,'ジャニーズ系':82,'女性アイドル':85,'歌手・アーティスト':82,'バラエティ':72,'お笑い芸人':70,'若手・注目株':85},
+};
+
+// テレビ内サブジャンル × ジャンル適性
+const TV_GENRE_FIT = {
+  drama:   {'女優':90,'俳優':90,'ジャニーズ系':70,'女性アイドル':55,'歌手・アーティスト':62,'バラエティ':45,'お笑い芸人':42,'若手・注目株':76},
+  variety: {'女優':60,'俳優':55,'ジャニーズ系':76,'女性アイドル':66,'歌手・アーティスト':65,'バラエティ':95,'お笑い芸人':92,'若手・注目株':70},
+  news:    {'女優':65,'俳優':68,'ジャニーズ系':50,'女性アイドル':52,'歌手・アーティスト':55,'バラエティ':80,'お笑い芸人':75,'若手・注目株':55},
+  sports:  {'女優':50,'俳優':55,'ジャニーズ系':58,'女性アイドル':52,'歌手・アーティスト':55,'バラエティ':72,'お笑い芸人':65,'若手・注目株':60},
+  music:   {'女優':65,'俳優':60,'ジャニーズ系':82,'女性アイドル':88,'歌手・アーティスト':95,'バラエティ':60,'お笑い芸人':55,'若手・注目株':75},
+};
+
+// メディア別サブ設定定義
+const MEDIA_SUB_DEF = {
+  tv: [
+    {key:'genre', lbl:'ジャンル', opts:[
+      {v:'drama',l:'ドラマ'},{v:'variety',l:'バラエティ'},{v:'news',l:'情報・報道'},{v:'sports',l:'スポーツ'},{v:'music',l:'音楽'}
+    ]},
+    {key:'slot', lbl:'放送時間帯', opts:[
+      {v:'prime',l:'プライム'},{v:'noon',l:'昼'},{v:'late',l:'深夜'},{v:'morning',l:'朝'},{v:'holiday',l:'休日午後'}
+    ]},
+    {key:'station', lbl:'放送局', opts:[
+      {v:'commercial',l:'民放キー局'},{v:'nhk',l:'NHK'},{v:'bs',l:'BS'},{v:'cs',l:'CS'}
+    ]},
+    {key:'continuity', lbl:'連続性', opts:[
+      {v:'single',l:'単発'},{v:'regular',l:'レギュラー'}
+    ]},
+  ],
+  cm: [
+    {key:'category', lbl:'商品カテゴリ', opts:[
+      {v:'food',l:'食品・飲料'},{v:'beauty',l:'化粧品・美容'},{v:'auto',l:'自動車'},
+      {v:'finance',l:'金融'},{v:'daily',l:'日用品'},{v:'telecom',l:'通信'},{v:'ent',l:'エンタメ'}
+    ]},
+    {key:'duration', lbl:'CM尺', opts:[
+      {v:'15',l:'15秒'},{v:'30',l:'30秒'},{v:'60',l:'60秒'}
+    ]},
+    {key:'type', lbl:'起用形態', opts:[
+      {v:'image',l:'イメージキャラクター'},{v:'product',l:'商品訴求'},{v:'brand',l:'企業ブランド'}
+    ]},
+    {key:'period', lbl:'継続期間', opts:[
+      {v:'once',l:'単発'},{v:'3m',l:'3ヶ月'},{v:'6m',l:'6ヶ月'},{v:'1y',l:'1年以上'}
+    ]},
+  ],
+  movie: [
+    {key:'genre', lbl:'ジャンル', opts:[
+      {v:'action',l:'アクション'},{v:'love',l:'ラブストーリー'},{v:'comedy',l:'コメディ'},{v:'horror',l:'ホラー'},{v:'sf',l:'SF'}
+    ]},
+    {key:'role', lbl:'役割', opts:[
+      {v:'lead',l:'主演'},{v:'colead',l:'W主演'},{v:'support',l:'助演'},{v:'voice',l:'声優'}
+    ]},
+    {key:'scale', lbl:'公開規模', opts:[
+      {v:'nationwide',l:'全国公開'},{v:'limited',l:'限定公開'},{v:'streaming',l:'配信限定'}
+    ]},
+    {key:'origin', lbl:'原作', opts:[
+      {v:'original',l:'オリジナル'},{v:'manga',l:'漫画原作'},{v:'novel',l:'小説原作'}
+    ]},
+  ],
+  magazine: [
+    {key:'genre', lbl:'ジャンル', opts:[
+      {v:'fashion',l:'ファッション'},{v:'weekly',l:'週刊誌'},{v:'mens',l:'男性誌'},{v:'womens',l:'女性誌'},{v:'gravure',l:'グラビア'}
+    ]},
+    {key:'placement', lbl:'掲載形態', opts:[
+      {v:'cover',l:'表紙'},{v:'gravure_top',l:'巻頭グラビア'},{v:'interview',l:'インタビュー'},{v:'series',l:'連載'}
+    ]},
+    {key:'frequency', lbl:'発行頻度', opts:[
+      {v:'weekly',l:'週刊'},{v:'biweekly',l:'隔週'},{v:'monthly',l:'月刊'}
+    ]},
+  ],
+  newspaper: [
+    {key:'medium', lbl:'媒体', opts:[
+      {v:'national',l:'全国紙'},{v:'sports',l:'スポーツ紙'},{v:'local',l:'地方紙'}
+    ]},
+    {key:'placement', lbl:'掲載形態', opts:[
+      {v:'ad',l:'広告'},{v:'interview',l:'インタビュー記事'},{v:'column',l:'コラム連載'}
+    ]},
+    {key:'size', lbl:'掲載面', opts:[
+      {v:'full',l:'全面広告'},{v:'half',l:'半面'},{v:'small',l:'1段'}
+    ]},
+  ],
+  sns: [
+    {key:'platform', lbl:'プラットフォーム', opts:[
+      {v:'instagram',l:'Instagram'},{v:'x',l:'X(Twitter)'},{v:'tiktok',l:'TikTok'},{v:'youtube',l:'YouTube'},{v:'line',l:'LINE'}
+    ]},
+    {key:'content', lbl:'コンテンツ形式', opts:[
+      {v:'short',l:'ショート動画'},{v:'live',l:'ライブ配信'},{v:'photo',l:'写真投稿'},{v:'text',l:'テキスト'}
+    ]},
+    {key:'operation', lbl:'運用形態', opts:[
+      {v:'own',l:'本人アカウント'},{v:'collab',l:'公式コラボ'},{v:'pr',l:'PR投稿'}
+    ]},
+    {key:'freq', lbl:'投稿頻度', opts:[
+      {v:'daily',l:'毎日'},{v:'3to4',l:'週3〜4回'},{v:'1to2',l:'週1〜2回'}
+    ]},
+  ],
+  web: [
+    {key:'format', lbl:'形態', opts:[
+      {v:'banner',l:'バナー広告'},{v:'tieup',l:'タイアップ記事'},{v:'ambassador',l:'ブランドアンバサダー'},{v:'video',l:'動画広告'}
+    ]},
+    {key:'medium', lbl:'媒体種別', opts:[
+      {v:'news',l:'ニュースサイト'},{v:'ec',l:'ECサイト'},{v:'portal',l:'ポータル'},{v:'streaming',l:'動画配信'}
+    ]},
+    {key:'delivery', lbl:'配信方式', opts:[
+      {v:'direct',l:'純広告'},{v:'retarget',l:'リターゲティング'},{v:'social',l:'SNS連動'}
+    ]},
+  ],
 };
 
 // ジャンル別 視聴意向（年代×性別）
@@ -307,7 +438,8 @@ const DEMO_DEF = {M10:36,M20:46,M30:51,M40:49,M50:43, F10:49,F20:59,F30:56,F40:5
 
 // ── 状態 ──────────────────────────────────────────────────
 let allT = [], selT = [], genre = 'all';
-let fmt = 'drama', slot = 'prime';
+let mediaType = 'tv';
+let mediaOpts = {};
 let favMap = {}, favDataLoaded = false;
 
 // ── データ読み込み ─────────────────────────────────────────
@@ -404,16 +536,41 @@ function updateBtn() {
   btn.textContent = selT.length ? `${selT.length}人でシミュレーション実行` : 'タレントを選択してください';
 }
 
-// ── ラジオ切り替え ─────────────────────────────────────────
-['fmt-g','slot-g'].forEach(gid => {
-  document.getElementById(gid).querySelectorAll('.rb').forEach(b => {
+// ── メディア設定 ──────────────────────────────────────────
+function buildMediaSub() {
+  const defs = MEDIA_SUB_DEF[mediaType] || [];
+  const el = document.getElementById('media-sub');
+  el.innerHTML = defs.map(g => {
+    const cols = g.opts.length <= 2 ? 2 : g.opts.length >= 5 ? 3 : 2;
+    return `<div class="sub-sg">
+      <span class="slbl">${g.lbl}</span>
+      <div class="rg" style="grid-template-columns:repeat(${cols},1fr)">
+        ${g.opts.map((o,i) => `<button class="rb${(mediaOpts[g.key]===o.v||(mediaOpts[g.key]==null&&i===0))?' on':''}" data-key="${g.key}" data-v="${o.v}"><span class="rdot"></span>${o.l}</button>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.rb').forEach(b => {
     b.onclick = () => {
-      document.getElementById(gid).querySelectorAll('.rb').forEach(x => x.classList.remove('on'));
+      const key = b.dataset.key;
+      el.querySelectorAll(`.rb[data-key="${key}"]`).forEach(x => x.classList.remove('on'));
       b.classList.add('on');
-      if (gid === 'fmt-g') fmt = b.dataset.v; else slot = b.dataset.v;
+      mediaOpts[key] = b.dataset.v;
     };
   });
+}
+
+function setMediaType(m) {
+  mediaType = m;
+  mediaOpts = {};
+  (MEDIA_SUB_DEF[m] || []).forEach(g => { mediaOpts[g.key] = g.opts[0].v; });
+  document.querySelectorAll('.mtab').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  buildMediaSub();
+}
+
+document.getElementById('media-tabs').querySelectorAll('.mtab').forEach(b => {
+  b.onclick = () => setMediaType(b.dataset.m);
 });
+setMediaType('tv');
 
 document.getElementById('q').addEventListener('input', filterList);
 document.getElementById('sim-btn').onclick = simulate;
@@ -428,42 +585,46 @@ function simulate() {
 
   const scores = selT.map(t => t.latest?.score ?? 0);
   const base   = avg(scores);
-  const fm     = FMT_MULT[fmt],  sm = SLOT_MULT[slot];
+  const W      = MEDIA_WEIGHTS[mediaType];
 
-  /* favor_scores.json 統合 ─────────────────────────────── */
-  const favScores  = selT.map(t => favMap[t.name]).filter(v => v != null);
-  const avgFav     = favScores.length ? avg(favScores) : null;
+  /* メディア別乗数 */
+  const fm = mediaType === 'tv'
+    ? (TV_GENRE_MULT[mediaOpts.genre] ?? 1.0) * (TV_SLOT_MULT[mediaOpts.slot] ?? 1.0)
+    : (MEDIA_MULT[mediaType] ?? 0.80);
 
-  /* 1. 推定視聴率 / 注目度 */
-  // 認知率プロキシ（好感度）で視聴率を上乗せ: avgFav=50→±0、=100→+1.2pt、=0→-1.2pt
+  /* favor_scores.json 統合 */
+  const favScores = selT.map(t => favMap[t.name]).filter(v => v != null);
+  const avgFav    = favScores.length ? avg(favScores) : null;
+
+  /* 1. 推定指標値 */
   const awarenessBonus = avgFav != null ? ((avgFav - 50) / 50) * 1.2 : 0;
-  const br   = (base / 100) * 14.5 * fm * sm + 0.6 + awarenessBonus;
-  // 視聴意向（好感度と正相関）でレンジを調整: 好感度高→レンジ狭く安定、低→幅広く不確実
+  const br   = (base / 100) * 14.5 * fm + 0.6 + awarenessBonus;
   const intentFactor = avgFav != null ? avgFav / 100 : 0.5;
-  const spread = 0.18 - intentFactor * 0.06;   // 0.18〜0.12
+  const spread = 0.18 - intentFactor * 0.06;
   const rLo  = Math.max(0.3, br * (1 - spread)).toFixed(1);
   const rHi  = Math.min(25,  br * (1 + spread)).toFixed(1);
-  const isTV = fmt === 'drama' || fmt === 'variety';
-  const rLbl = isTV ? '推定視聴率' : '推定注目度';
-  const rUnit= isTV ? '%' : 'pt';
+  const isTV = mediaType === 'tv';
+  const { lbl: rLbl, unit: rUnit } = MEDIA_METRIC[mediaType];
 
-  /* 2. SNSバズスコア */
+  /* 2. SNSバズスコア（メディア別重み） */
   const buzz = Math.round(clamp(avg(selT.map(t => {
-    const l = t.latest; let s=0,w=0;
-    if (l.trend_score   != null) { s += l.trend_score*35; w+=35; }
-    if (l.yt_avg_views  != null) { s += clamp(Math.log10(l.yt_avg_views+1)/6*100,0,100)*35; w+=35; }
-    if (l.news_count    != null) { s += clamp(l.news_count/3,0,100)*20; w+=20; }
-    if (l.wiki_pageviews!= null) { s += clamp(l.wiki_pageviews/1000,0,100)*10; w+=10; }
+    const l = t.latest; let s=0, w=0;
+    if (l.trend_score    != null) { const wt=W.trends*100;    s+=l.trend_score*wt;                                        w+=wt; }
+    if (l.yt_avg_views   != null) { const wt=W.yt_views*100;  s+=clamp(Math.log10(l.yt_avg_views+1)/6*100,0,100)*wt;    w+=wt; }
+    if (l.news_count     != null) { const wt=W.news*100;      s+=clamp(l.news_count/3,0,100)*wt;                         w+=wt; }
+    if (l.wiki_pageviews != null) { const wt=W.wiki*100;      s+=clamp(l.wiki_pageviews/1000,0,100)*wt;                  w+=wt; }
+    if (l.news_sentiment != null) { const wt=W.sentiment*100; s+=l.news_sentiment*wt;                                     w+=wt; }
+    if (l.yt_subscribers != null) { const wt=W.yt_subs*100;   s+=clamp(Math.log10(l.yt_subscribers+1)/7*100,0,100)*wt;  w+=wt; }
     return w > 0 ? s/w : 0;
   })), 0, 100));
 
   /* 3. 相性スコア */
+  const fitMap      = mediaType === 'tv' ? (TV_GENRE_FIT[mediaOpts.genre] ?? MEDIA_FIT.tv) : MEDIA_FIT[mediaType];
+  const fitAvg      = avg(selT.map(t => fitMap?.[t.genre] ?? 55));
   const uniqGenre   = [...new Set(selT.map(t=>t.genre))].length;
   const diverseBonus= Math.min((uniqGenre-1)*12, 24);
   const variance    = avg(scores.map(s=>(s-base)**2));
   const balance     = clamp(28 - variance/22, 0, 28);
-  const fitAvg      = avg(selT.map(t => FMT_FIT[fmt]?.[t.genre] ?? 55));
-  // 好感度が高いタレントは相性スコアを上乗せ: avgFav=50→±0、=100→+12、=0→-12
   const favCompatBonus = avgFav != null ? Math.round((avgFav - 50) / 50 * 12) : 0;
   const compat      = Math.round(clamp(18 + diverseBonus + balance + fitAvg*0.28 + favCompatBonus, 0, 99));
 
@@ -474,43 +635,46 @@ function simulate() {
     return news / Math.max(trend, 4);
   }));
   let riskKey = riskVal > 9 ? 'high' : riskVal > 4.5 ? 'mid' : 'low';
-  // 感情スコアが30以下なら炎上リスクを高に格上げ
   const sentScores = selT.map(t => t.latest?.news_sentiment).filter(v => v != null);
   if (sentScores.length > 0 && avg(sentScores) <= 30) riskKey = 'high';
   const RLBL = {high:'高',mid:'中',low:'低'};
 
-  /* 5. デモグラフィック */
-  const AGES  = ['10代','20代','30代','40代','50代+'];
-  const MK    = ['M10','M20','M30','M40','M50'];
-  const FK    = ['F10','F20','F30','F40','F50'];
-  const demoM = MK.map(k => {
-    let v = avg(selT.map(t=>(GENRE_DEMO[t.genre]??DEMO_DEF)[k]??40));
-    if (fmt==='drama')     v *= 0.92;
-    if (fmt==='variety')   v *= 1.08;
-    if (fmt==='streaming') v *= k.endsWith('10')||k.endsWith('20') ? 1.1 : 0.88;
-    return Math.round(clamp(v, 3, 99));
-  });
-  const demoF = FK.map(k => {
-    let v = avg(selT.map(t=>(GENRE_DEMO[t.genre]??DEMO_DEF)[k]??40));
-    if (fmt==='drama')     v *= 1.08;
-    if (fmt==='variety')   v *= 0.93;
-    if (fmt==='streaming') v *= k.endsWith('10')||k.endsWith('20') ? 1.1 : 0.88;
-    return Math.round(clamp(v, 3, 99));
-  });
+  /* 5. デモグラフィック（メディア別補正） */
+  const AGES = ['10代','20代','30代','40代','50代+'];
+  const MK   = ['M10','M20','M30','M40','M50'];
+  const FK   = ['F10','F20','F30','F40','F50'];
+  const demoAdj = {
+    tv:       (k,v) => mediaOpts.genre==='drama'   ? (k.startsWith('F')?v*1.08:v*0.92)
+                     : mediaOpts.genre==='variety'  ? (k.startsWith('F')?v*0.93:v*1.08) : v,
+    cm:       (k,v) => v,
+    movie:    (k,v) => k.endsWith('20')||k.endsWith('30') ? v*1.08 : v*0.92,
+    magazine: (k,v) => k.startsWith('F') ? v*1.12 : v*0.88,
+    newspaper:(k,v) => k.endsWith('40')||k.endsWith('50') ? v*1.12 : v*0.88,
+    sns:      (k,v) => k.endsWith('10')||k.endsWith('20') ? v*1.15 : v*0.82,
+    web:      (k,v) => k.endsWith('20')||k.endsWith('30') ? v*1.10 : v*0.90,
+  };
+  const adj  = demoAdj[mediaType] || ((k,v) => v);
+  const demoM = MK.map(k => Math.round(clamp(adj(k, avg(selT.map(t=>(GENRE_DEMO[t.genre]??DEMO_DEF)[k]??40))), 3, 99)));
+  const demoF = FK.map(k => Math.round(clamp(adj(k, avg(selT.map(t=>(GENRE_DEMO[t.genre]??DEMO_DEF)[k]??40))), 3, 99)));
 
   // ── 描画 ─────────────────────────────────────────────────
+  const mediaLblStr = MEDIA_LBL[mediaType];
+  const tvGenreLbl  = {drama:'ドラマ',variety:'バラエティ',news:'情報・報道',sports:'スポーツ',music:'音楽'}[mediaOpts.genre] || '';
+  const tvSlotLbl   = {prime:'プライム',noon:'昼',late:'深夜',morning:'朝',holiday:'休日午後'}[mediaOpts.slot] || '';
+  const contextLbl  = isTV ? `${tvSlotLbl}${tvGenreLbl}` : mediaLblStr;
+
   /* Metric cards */
   const favNote = avgFav != null ? `（好感度${Math.round(avgFav)}補正済）` : '';
   document.getElementById('m-row').innerHTML = `
     <div class="mc">
       <div class="ml">${rLbl}</div>
       <div class="mv">${rLo}〜${rHi}<span class="unit">${rUnit}</span></div>
-      <div class="ms">${FMT_LBL[fmt]} / ${SLOT_LBL[slot]}${favNote}</div>
+      <div class="ms">${contextLbl}${favNote}</div>
     </div>
     <div class="mc">
       <div class="ml">SNSバズスコア</div>
       <div class="mv">${buzz}<span class="unit">/100</span></div>
-      <div class="ms">ソーシャル期待値</div>
+      <div class="ms">${mediaLblStr}重み最適化済み</div>
     </div>
     <div class="mc">
       <div class="ml">相性スコア</div>
@@ -535,9 +699,9 @@ function simulate() {
 
   /* Talent cards */
   document.getElementById('tc-grid').innerHTML = selT.map(t => {
-    const l   = t.latest;
-    const fit = FMT_FIT[fmt]?.[t.genre] ?? 55;
-    const fav = favMap[t.name] ?? null;
+    const l            = t.latest;
+    const mediaFitVal  = MEDIA_FIT[mediaType]?.[t.genre] ?? 55;
+    const fav          = favMap[t.name] ?? null;
     return `<div class="tc">
       <div class="tc-name">${t.name}</div>
       <div class="tc-tag">${t.genre}</div>
@@ -547,10 +711,10 @@ function simulate() {
       <div class="tc-row"><span class="tc-k">Wiki PV</span><span class="tc-v">${fmt2(l.wiki_pageviews)}</span></div>
       ${fav != null ? `<div class="tc-row"><span class="tc-k">好感度</span><span class="tc-v" style="color:var(--success)">${fav}</span></div>` : ''}
       <div class="tc-row">
-        <span class="tc-k">フォーマット適性</span>
-        <span class="tc-v">${fit}</span>
+        <span class="tc-k">${mediaLblStr}適性</span>
+        <span class="tc-v" style="color:var(--primary);font-weight:700">${mediaFitVal}</span>
       </div>
-      <div class="fit-bar-wrap"><div class="fit-bar" style="width:${fit}%"></div></div>
+      <div class="fit-bar-wrap"><div class="fit-bar" style="width:${mediaFitVal}%"></div></div>
       <div class="tc-score-box">
         <div class="tc-big">${l.score ?? '–'}</div>
         <div class="tc-slbl">SNSスコア</div>
@@ -562,7 +726,7 @@ function simulate() {
   const stars = selT.filter(t => (t.latest?.score ?? 0) >= 70).length;
   const mids  = selT.filter(t => { const s = t.latest?.score ?? 0; return s >= 50 && s < 70; }).length;
   const young = selT.length - stars - mids;
-  generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit: fitAvg, demoM, demoF, uniqGenre, avgFav, rLo, rHi });
+  generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit: fitAvg, demoM, demoF, uniqGenre, avgFav, rLo, rHi, mediaLbl: mediaLblStr, contextLbl, isTV, rLbl, rUnit });
 
   const el = document.getElementById('results');
   el.style.display = 'block';
@@ -570,7 +734,7 @@ function simulate() {
 }
 
 // ── AI 考察（リッチ版）────────────────────────────────────
-function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, demoM, demoF, uniqGenre, avgFav, rLo, rHi }) {
+function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, demoM, demoF, uniqGenre, avgFav, rLo, rHi, mediaLbl, contextLbl, isTV, rLbl, rUnit }) {
   const AGES = ['10代','20代','30代','40代','50代'];
 
   // テキスト装飾ヘルパー
@@ -581,11 +745,7 @@ function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, d
   const hla = v => `<span class="ins-hla">${v}</span>`;
   const pct = v => `<span class="ins-num">${v}%</span>`;
 
-  const fmtLbl  = FMT_LBL[fmt];
-  const slotLbl = SLOT_LBL[slot];
-  const isTV    = fmt === 'drama' || fmt === 'variety';
-  const rUnit   = isTV ? '%' : 'pt';
-  const rLbl    = isTV ? '視聴率' : '注目度';
+  const insRLbl = isTV ? '視聴率' : rLbl.replace('推定','');
 
   const fSum     = demoF.reduce((a,b) => a+b, 0);
   const mSum     = demoM.reduce((a,b) => a+b, 0);
@@ -604,59 +764,58 @@ function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, d
   // ── ① キャスティング総評 ────────────────────────────────
   let s1 = '';
 
-  // 構成タイプ判定（3パターン以上）
   if (stars >= 2) {
-    s1 += `${slotLbl}${fmtLbl}として、${nm(topTalent.name)}を筆頭に主演クラス${hl(stars+'名')}が揃う強力なキャスティングです。`;
-    s1 += `複数の主演級が並ぶ布陣は、過去の${fmtLbl}でも初回から高い数字を記録した作品に共通するパターンであり、`;
+    s1 += `${contextLbl}として、${nm(topTalent.name)}を筆頭に主演クラス${hl(stars+'名')}が揃う強力なキャスティングです。`;
+    s1 += `複数の主演級が並ぶ布陣は、過去の${mediaLbl}でも初回から高い数字を記録した作品に共通するパターンであり、`;
     s1 += uniqGenre >= 3
-      ? `さらに${genreSet.join('・')}と多彩なジャンル構成が加わることで、コアファン以外の幅広い視聴層へのクロスオーバー訴求が期待できます。`
-      : `${genreSet[0]}ジャンルのコアファンを核に据えながら、スコア帯の安定感で広告主にも説明しやすい編成となっています。`;
-    if (femaleStr) s1 += `特に${AGES[topFi]}女性層（視聴意向${pct(topFPct)}）への訴求が突出しており、F2・F3層をターゲットとするスポンサーへのアピール材料になります。`;
-    else           s1 += `男女ともにバランスよく届く構成で、世帯視聴率の引き上げが狙えます。`;
+      ? `さらに${genreSet.join('・')}と多彩なジャンル構成が加わることで、コアファン以外の幅広い層へのクロスオーバー訴求が期待できます。`
+      : `${genreSet[0]}ジャンルのコアファンを核に据えながら、スコア帯の安定感でクライアントにも説明しやすい布陣となっています。`;
+    if (femaleStr) s1 += `特に${AGES[topFi]}女性層（意向${pct(topFPct)}）への訴求が突出しており、F2・F3層をターゲットとするスポンサーへのアピール材料になります。`;
+    else           s1 += `男女ともにバランスよく届く構成で、幅広いリーチの引き上げが狙えます。`;
   } else if (stars === 1 && mids >= 1) {
-    s1 += `${slotLbl}${fmtLbl}として、${nm(topTalent.name)}が看板を張り、実力派中堅${mids}名がサポートする王道キャスティングです。`;
-    s1 += `主演1名＋中堅複数というフォーマットは視聴率の安定性が高く、スポンサーからの信頼も得やすい鉄板構成です。`;
+    s1 += `${contextLbl}として、${nm(topTalent.name)}が看板を張り、実力派中堅${mids}名がサポートする王道キャスティングです。`;
+    s1 += `看板1名＋中堅複数という構成は安定性が高く、クライアントからの信頼も得やすい鉄板パターンです。`;
     s1 += femaleStr
-      ? `${AGES[topFi]}女性（視聴意向${pct(topFPct)}）を中核ターゲットに置きながら、中堅陣の多様性で副次的な層にも届く奥行きがあります。`
-      : `男性視聴層（トップ${AGES[topMi]} ${pct(topMPct)}）も取り込みやすく、幅広い世帯視聴率獲得が見込めます。`;
+      ? `${AGES[topFi]}女性（意向${pct(topFPct)}）を中核ターゲットに置きながら、中堅陣の多様性で副次的な層にも届く奥行きがあります。`
+      : `男性層（トップ${AGES[topMi]} ${pct(topMPct)}）も取り込みやすく、幅広い層への到達が見込めます。`;
   } else if (young >= 3) {
-    s1 += `${slotLbl}${fmtLbl}として、フレッシュな若手タレント中心の攻めたキャスティングです。`;
+    s1 += `${contextLbl}として、フレッシュな若手タレント中心の攻めたキャスティングです。`;
     s1 += `若手起用はコスト面での優位性とともに、Z世代・若年層からの新規ファン獲得という大きな可能性を秘めています。`;
-    s1 += fmt === 'streaming'
-      ? `配信コンテンツならではの一気見・周回需要とも相性が良く、SNS世代が自発的に拡散するバイラルコンテンツになるポテンシャルを持っています。`
-      : `放送後の切り抜き動画やSNS拡散でロングテールの話題継続が期待でき、${fmtLbl}としての新陳代謝を促す戦略的な選択です。`;
-    if (stars === 0) s1 += `ただし実績のある主演クラスが不在なため、脚本・演出の質が視聴率を大きく左右する点は留意が必要です。`;
+    s1 += (mediaType === 'sns' || mediaType === 'web')
+      ? `デジタルプラットフォームならではのバイラル需要とも相性が良く、SNS世代が自発的に拡散するコンテンツになるポテンシャルを持っています。`
+      : `掲載・放送後のSNS拡散でロングテールの話題継続が期待でき、${mediaLbl}としての新陳代謝を促す戦略的な選択です。`;
+    if (stars === 0) s1 += `ただし実績のある看板クラスが不在なため、企画・演出の質が数字を大きく左右する点は留意が必要です。`;
   } else if (uniqGenre >= 3) {
-    s1 += `${slotLbl}${fmtLbl}として、${genreSet.join('・')}と多彩なジャンルにまたがるクロスオーバーキャスティングです。`;
-    s1 += `単一ジャンルのファン層だけでなく複数の視聴者コミュニティにリーチできる点は、競合作品との明確な差別化要素になります。`;
-    s1 += `一方でキャラクター設定と世界観の統一感を保つ脚本上の工夫が、このキャストの力を最大限に引き出す鍵となります。`;
+    s1 += `${contextLbl}として、${genreSet.join('・')}と多彩なジャンルにまたがるクロスオーバーキャスティングです。`;
+    s1 += `単一ジャンルのファン層だけでなく複数のコミュニティにリーチできる点は、競合との明確な差別化要素になります。`;
+    s1 += `一方で世界観の統一感を保つ設計上の工夫が、このキャストの力を最大限に引き出す鍵となります。`;
   } else {
-    s1 += `${slotLbl}${fmtLbl}として、${names5}によるバランス型キャスティングです。`;
-    s1 += `主演・中堅・若手の役割分担が明確で、各タレントが互いの強みを補い合う安定したラインナップです。`;
-    s1 += `特定ファン層への偏りを避けながら幅広い視聴者層を取り込む戦略として、${slotLbl}帯の競合環境においても手堅い選択と言えます。`;
+    s1 += `${contextLbl}として、${names5}によるバランス型キャスティングです。`;
+    s1 += `役割分担が明確で、各タレントが互いの強みを補い合う安定したラインナップです。`;
+    s1 += `特定ファン層への偏りを避けながら幅広い層を取り込む戦略として、競合環境においても手堅い選択と言えます。`;
   }
 
-  // ── ② 視聴率予測の根拠 ──────────────────────────────────
-  let s2 = `推定${rLbl}${hl(rLo+'〜'+rHi+rUnit)}の根拠を説明します。`;
+  // ── ② 指標予測の根拠 ──────────────────────────────────
+  let s2 = `${rLbl}${hl(rLo+'〜'+rHi+rUnit)}の根拠を説明します。`;
 
   if (buzz >= 72) {
-    s2 += `まずSNSバズスコアが${hl(buzz+'/100')}と非常に高く、${nm(topTalent.name)}をはじめとする各タレントの発信力が視聴行動を直接後押しします。`;
+    s2 += `まずSNSバズスコアが${hl(buzz+'/100')}と非常に高く、${nm(topTalent.name)}をはじめとする各タレントの発信力が行動変容を直接後押しします。`;
   } else if (buzz >= 48) {
-    s2 += `SNSバズスコア${hl(buzz+'/100')}は中〜高水準にあり、適切なプロモーション設計で視聴率の押し上げが見込めます。`;
+    s2 += `SNSバズスコア${hl(buzz+'/100')}は中〜高水準にあり、適切なプロモーション設計で数値の押し上げが見込めます。`;
   } else {
     s2 += `SNSバズスコアが${hla(buzz+'/100')}とやや控えめなため、プロモーション投資で数字を下支えすることが重要です。`;
   }
 
   if (avgFav != null) {
-    s2 += `調査ベースの好感度スコア（平均${hl(Math.round(avgFav)+'点')}）も視聴率算出に反映しており、`;
+    s2 += `調査ベースの好感度スコア（平均${hl(Math.round(avgFav)+'点')}）も算出に反映しており、`;
     s2 += avgFav >= 62
-      ? `高い好感度は初回から安定した視聴習慣の形成を助け、視聴継続率の向上に寄与します。`
-      : `好感度の上積み余地があるため、第2話以降の視聴継続率改善に期待がかかります。`;
+      ? `高い好感度は初期から安定した反応を生み出し、継続的なエンゲージメントの向上に寄与します。`
+      : `好感度の上積み余地があるため、継続露出による認知・好感の積み上げに期待がかかります。`;
   } else {
-    s2 += `${nm(topTalent.name)}はSNSスコア${hl(topTalent.latest?.score??'–')}を持ち、初回集客の核となります。`;
+    s2 += `${nm(topTalent.name)}はSNSスコア${hl(topTalent.latest?.score??'–')}を持ち、初期集客の核となります。`;
   }
 
-  s2 += `フォーマット適性${hl(Math.round(avgFit)+'/100')}は${avgFit >= 76 ? '非常に高く、キャスト力をフルに発揮できる条件が整っています' : avgFit >= 56 ? '良好で、演出の工夫次第でポテンシャルを最大化できます' : 'やや低めのため、キャラクター設計と脚本の作り込みで補完が必要です'}。`;
+  s2 += `${mediaLbl}適性${hl(Math.round(avgFit)+'/100')}は${avgFit >= 76 ? '非常に高く、キャスト力をフルに発揮できる条件が整っています' : avgFit >= 56 ? '良好で、企画の工夫次第でポテンシャルを最大化できます' : 'やや低めのため、コンセプト設計と演出の作り込みで補完が必要です'}。`;
 
   // ── ③ ターゲット層分析 ──────────────────────────────────
   const sorted_f = demoF.map((v,i)=>({age:AGES[i],pct:v})).sort((a,b)=>b.pct-a.pct);
@@ -671,13 +830,16 @@ function generateInsights({ stars, mids, young, buzz, compat, riskKey, avgFit, d
     s3 += `プロモーション施策においては、女性向けビジュアル展開と男性向けコンテンツ展開を並列で設計することで、双方のセグメントを効率よく取り込めます。`;
   }
 
-  const fmtDemoNote = {
-    drama:     `${fmtLbl}は30〜40代女性のエンゲージメントが特に高い傾向があり、本キャストはその層にダイレクトに訴求できる構成です。`,
-    variety:   `${fmtLbl}は世帯視聴を促しやすく、40〜50代層の取り込みにも優位性があります。家族視聴を意識した企画設計を加えることで、さらに視聴率を引き上げられます。`,
+  const mediaDemoNote = {
+    tv:        `テレビは30〜40代女性のエンゲージメントが特に高い傾向があり、本キャストはその層にダイレクトに訴求できる構成です。`,
+    cm:        `CMは視聴者の購買意欲と直結するため、20〜40代の購買力層への訴求効率が高いです。高好感度タレントの組み合わせがブランドセーフティを高めます。`,
     movie:     `映画は20〜30代の劇場動員を主軸としつつ、配信・地上波放送の二次展開でより広い層への認知拡大が図れます。`,
-    streaming: `配信は10〜20代のヘビーユーザーが視聴の中心になるため、若年層への訴求力とSNS連動設計が継続的な作品評価を左右します。`,
-  }[fmt];
-  s3 += fmtDemoNote;
+    book:      `出版はコアファン向け深掘りコンテンツとして機能し、読者層の年齢幅も広いです。フォトエッセイや対談本など多彩な展開が視認性を高めます。`,
+    newspaper: `新聞・雑誌は40代以上へのリーチに優位性があり、権威ある媒体露出がタレントのブランド価値向上に寄与します。`,
+    sns:       `SNSはフォロワーとの双方向コミュニケーションを主軸に、10〜30代への即時リーチが強みです。エンゲージメント率の高いタレント起用が拡散効果を最大化します。`,
+    web:       `Web・配信は10〜20代のヘビーユーザーが視聴の中心になるため、若年層への訴求力とSNS連動設計が継続的な作品評価を左右します。`,
+  }[mediaType] ?? '';
+  s3 += mediaDemoNote;
 
   // ── ④ SNS・プロモーション予測 ──────────────────────────
   let s4 = '';
