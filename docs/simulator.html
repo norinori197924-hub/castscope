@@ -959,7 +959,7 @@ function simulate() {
   el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-// ── AI 考察（3層構造）────────────────────────────────────
+// ── AI 考察（3層＋4軸拡張）──────────────────────────────
 function generateInsights({ buzz, compat, riskKey, avgFit, demoM, demoF, avgFav, rLo, rHi, mediaLbl, rLbl, rUnit }) {
 
   // デコレーターヘルパー
@@ -980,6 +980,23 @@ function generateInsights({ buzz, compat, riskKey, avgFit, demoM, demoF, avgFav,
   const avgYtViews   = safeAvg('yt_avg_views');
   const avgNewsCount = safeAvg('news_count');
   const avgWikiPv    = safeAvg('wiki_pageviews');
+
+  // ── 相対順位計算（全タレント対比）──────────────────────
+  const upperPct = (allVals, myVal) => {
+    const v = allVals.filter(n => n != null);
+    if (!v.length || myVal == null) return null;
+    const below = v.filter(n => n < myVal).length;
+    return Math.max(1, Math.round((1 - below / v.length) * 100));
+  };
+  const globalAvg = key => {
+    const v = allT.map(t => t.latest?.[key]).filter(n => n != null);
+    return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null;
+  };
+  const selAvgScore  = avg(selT.map(t => t.latest?.score ?? 0));
+  const scorePct     = upperPct(allT.map(t => t.latest?.score),     selAvgScore);
+  const sentPct      = upperPct(allT.map(t => t.latest?.news_sentiment), avgSentiment);
+  const trendGlobal  = globalAvg('trend_score');
+  const trendDiff    = (avgTrend != null && trendGlobal != null) ? Math.round(avgTrend - trendGlobal) : null;
 
   const fmtYt  = v => v >= 10000 ? Math.round(v/10000)+'万' : v.toLocaleString();
   const fmtPv  = v => v >= 1000 ? (v/1000).toFixed(1)+'k' : Math.round(v)+'';
@@ -1049,6 +1066,18 @@ function generateInsights({ buzz, compat, riskKey, avgFit, demoM, demoF, avgFav,
   if (!L1.length)
     L1.push(`${mediaLbl}起用として${hl(Math.round(avgFit)+'/100')}のメディア適性スコアを記録しています。指標バランスを踏まえた演出設計で潜在力を最大化してください。`);
 
+  // 相対評価テキストを L1 末尾に追加
+  const relLines = [];
+  if (scorePct != null)
+    relLines.push(`総合スコア${hl(Math.round(selAvgScore)+'点')}は登録タレント中${hl('上位'+scorePct+'%')}水準です。`);
+  if (trendDiff != null && Math.abs(trendDiff) >= 5)
+    relLines.push(trendDiff > 0
+      ? `話題性（Trends）は全体平均を${hl('+'+trendDiff+'ポイント')}上回っています。`
+      : `話題性（Trends）は全体平均を${hla(Math.abs(trendDiff)+'ポイント')}下回っています。`);
+  if (sentPct != null)
+    relLines.push(`感情スコア${hl(Math.round(avgSentiment)+'点')}は全体${hl('上位'+sentPct+'%')}水準です。`);
+  if (relLines.length) L1.push(relLines.join(' '));
+
   // ── Layer 2: ジャンル×サブ設定の適性評価 ────────────────
   let subKey = '', subLbl = '';
   if (mediaType === 'tv') {
@@ -1113,6 +1142,45 @@ function generateInsights({ buzz, compat, riskKey, avgFit, demoM, demoF, avgFav,
   const l2Body  = L2_MAP[`${mediaType}_${subKey}`] || `${subLbl}での${mediaLbl}起用において、${hl(Math.round(avgFit)+'/100')}のメディア適性スコアを基準に指標構成を踏まえた演出設計を行ってください。`;
   const l2Title = `${subLbl}での適性`;
 
+  // トレンド判定テキスト（L2 に付加）
+  const trendJudge = avgTrend == null ? ''
+    : avgTrend >= 70
+      ? `トレンド判定：${hlg('直近のTrendsが高水準（'+Math.round(avgTrend)+'/100）で旬のタイミングです。')}`
+      : avgTrend >= 40
+        ? `トレンド判定：安定した話題性（Trends ${Math.round(avgTrend)}/100）を維持しています。`
+        : `トレンド判定：${hla('現在の話題性（Trends '+Math.round(avgTrend)+'/100）は控えめですが、出演による再浮上効果が期待できます。')}`;
+
+  // ── リスク評価（Axis 3）────────────────────────────────
+  let riskSec = '';
+  if (avgSentiment != null) {
+    if (avgSentiment >= 60)
+      riskSec += `<p>感情スコアの平均は${hl(s_sent)}です。${hlg('ブランドセーフティは良好です。')}ネガティブ報道リスクは低水準にあり、安心して起用できる構成です。</p>`;
+    else if (avgSentiment >= 40)
+      riskSec += `<p>感情スコアの平均は${hla(s_sent)}です。${hla('⚠️ パブリックイメージの継続モニタリングを推奨します。')}一部のタレントでネガティブな報道が散見される可能性があります。</p>`;
+    else
+      riskSec += `<p>感情スコアの平均は${hlr(s_sent)}です。${hlr('🚨 炎上リスクが懸念されます。起用前に詳細調査を推奨します。')}ブランドへの影響を最小化するため、広報ラインとの事前協議を強く推奨します。</p>`;
+  } else {
+    riskSec = '<p>感情スコアのデータが不足しているため詳細判定ができません。過去のメディア報道を個別に確認してください。</p>';
+  }
+  selT.filter(t => t.latest?.news_sentiment != null && t.latest.news_sentiment < 40).forEach(t => {
+    riskSec += `<p>個別警告：${nm(t.name)}の感情スコアは${hlr(t.latest.news_sentiment+'点')}で要注意レベルです。</p>`;
+  });
+
+  // ── 主要ターゲット（Axis 4）──────────────────────────────
+  const SEG_F = ['10代女性','F1層（20代女性）','F1層（30代女性）','F2層（40代女性）','F3層（50代+女性）'];
+  const SEG_M = ['10代男性','M1層（20代男性）','M1層（30代男性）','M2層（40代男性）','M3層（50代+男性）'];
+  const allSegs = [
+    ...demoF.map((v,i) => ({v, label:SEG_F[i], g:'女性'})),
+    ...demoM.map((v,i) => ({v, label:SEG_M[i], g:'男性'})),
+  ].sort((a,b) => b.v - a.v);
+  const top1 = allSegs[0], top2 = allSegs[1];
+  const broadReach = allSegs.filter(s => s.v >= top1.v * 0.85).length >= 4;
+  let targetSec = `<p>このキャスティングは${hl(top1.label)}への訴求力が特に高い構成です（意向スコア${hl(top1.v+'%')}）。`;
+  targetSec += `次点は${top2.label}（${top2.v}%）で、`;
+  targetSec += broadReach
+    ? `複数のセグメントに広くリーチできるバランス構成です。スポンサー訴求の幅が広がります。</p>`
+    : `コアターゲットへの集中訴求型の構成です。セグメント特化型のプロモーション設計に向いています。</p>`;
+
   // ── Layer 3: 複数タレントの組み合わせ評価（2人以上のみ）──
   let L3_html = '';
   if (selT.length >= 2) {
@@ -1151,6 +1219,8 @@ function generateInsights({ buzz, compat, riskKey, avgFit, demoM, demoF, avgFav,
 
   // ── 描画 ─────────────────────────────────────────────────
   const badge = (lbl, cls) => `<span class="ibadge ${cls}" style="margin-left:auto">${lbl}</span>`;
+  const riskBadge = avgSentiment == null ? 'ib-b' : avgSentiment >= 60 ? 'ib-g' : avgSentiment >= 40 ? 'ib-a' : 'ib-r';
+  const riskBdgLbl = avgSentiment == null ? 'データ不足' : avgSentiment >= 60 ? 'リスク低' : avgSentiment >= 40 ? 'リスク中' : 'リスク高';
   const sections = [
     {
       icon: '📡', title: `メディア適性【${mediaLbl}】`,
@@ -1160,7 +1230,17 @@ function generateInsights({ buzz, compat, riskKey, avgFit, demoM, demoF, avgFav,
     {
       icon: '🎯', title: l2Title,
       bdg:  badge(subLbl, 'ib-b'),
-      body: `<p>${l2Body}</p>`,
+      body: `<p>${l2Body}</p>${trendJudge ? `<p style="margin-top:6px;font-size:.84rem;color:var(--muted)">${trendJudge}</p>` : ''}`,
+    },
+    {
+      icon: '⚠️', title: 'リスク評価',
+      bdg:  badge(riskBdgLbl, riskBadge),
+      body: riskSec,
+    },
+    {
+      icon: '👥', title: '主要ターゲット',
+      bdg:  badge(top1.label, 'ib-b'),
+      body: targetSec,
     },
     ...(selT.length >= 2 ? [{
       icon: '🤝', title: 'キャスティング評価',
