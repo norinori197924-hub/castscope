@@ -81,6 +81,40 @@ nav{display:flex;gap:6px}
 .sub-sg{margin-bottom:11px}
 .sub-sg:last-child{margin-bottom:0}
 
+/* kana row */
+.kana-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:9px}
+.kbtn{padding:3px 7px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-size:.7rem;color:var(--muted);transition:all .12s;font-family:inherit;min-width:28px;text-align:center}
+.kbtn:hover{border-color:var(--primary);color:var(--primary)}
+.kbtn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+/* filter row */
+.filter-row{display:flex;gap:6px;margin-bottom:8px;align-items:center}
+.genre-sel{flex:0 0 auto;padding:6px 7px;border:1px solid var(--border);border-radius:7px;font-size:.76rem;outline:none;font-family:inherit;background:#fff;color:var(--text);cursor:pointer;max-width:138px}
+.genre-sel:focus{border-color:var(--primary)}
+.srch-inline{flex:1;min-width:0;padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:.81rem;outline:none;font-family:inherit}
+.srch-inline:focus{border-color:var(--primary)}
+/* sort row */
+.sort-row{display:flex;gap:5px;margin-bottom:9px}
+.sort-btn{flex:1;padding:4px 5px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:.7rem;color:var(--muted);transition:all .12s;font-family:inherit;font-weight:500;white-space:nowrap}
+.sort-btn:hover{border-color:var(--primary);color:var(--primary)}
+.sort-btn.on{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700}
+/* mini sections (recent / favs) */
+.mini-sec{margin-bottom:10px;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.mini-hd{padding:5px 10px;background:var(--bg);font-size:.7rem;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)}
+.mini-ti{padding:6px 10px;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:.79rem}
+.mini-ti:last-child{border-bottom:none}
+.mini-ti:hover{background:#f0f7ff}
+.mini-ti.sel{background:var(--primary-light)}
+.mini-ti.dis{opacity:.38;cursor:not-allowed;pointer-events:none}
+.mini-ti-name{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-ti-sub{font-size:.67rem;color:var(--muted);white-space:nowrap}
+.mini-ti-score{font-size:.7rem;font-weight:600;color:var(--primary);background:var(--primary-light);padding:1px 5px;border-radius:5px;white-space:nowrap}
+/* fav button */
+.fav-btn{background:none;border:none;cursor:pointer;font-size:.87rem;padding:0 2px;color:#cbd5e1;line-height:1;flex-shrink:0;transition:color .12s}
+.fav-btn:hover{color:#f59e0b}
+.fav-btn.on{color:#f59e0b}
+/* genre group header in list */
+.genre-ghd{padding:5px 11px;font-size:.68rem;font-weight:700;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1;text-transform:uppercase;letter-spacing:.04em}
+
 /* simulate button */
 .sim-btn{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:.95rem;font-weight:700;cursor:pointer;transition:background .15s;font-family:inherit;letter-spacing:.03em}
 .sim-btn:hover:not(:disabled){background:var(--primary-dark)}
@@ -198,10 +232,42 @@ nav{display:flex;gap:6px}
   <aside class="panel-l">
     <div class="card">
       <div class="ctitle">タレントを選ぶ（最大5人）</div>
-      <div class="genre-row" id="genre-row">
-        <button class="gbtn on" data-g="all">すべて</button>
+
+      <div id="recent-sec" class="mini-sec" style="display:none">
+        <div class="mini-hd">🕐 最近選んだタレント</div>
+        <div id="recent-list"></div>
       </div>
-      <input class="srch" id="q" type="text" placeholder="名前で検索…">
+
+      <div id="fav-sec" class="mini-sec" style="display:none">
+        <div class="mini-hd">★ お気に入り</div>
+        <div id="fav-list"></div>
+      </div>
+
+      <div class="kana-row" id="kana-row">
+        <button class="kbtn on" data-k="all">全て</button>
+        <button class="kbtn" data-k="a">あ</button>
+        <button class="kbtn" data-k="ka">か</button>
+        <button class="kbtn" data-k="sa">さ</button>
+        <button class="kbtn" data-k="ta">た</button>
+        <button class="kbtn" data-k="na">な</button>
+        <button class="kbtn" data-k="ha">は</button>
+        <button class="kbtn" data-k="ma">ま</button>
+        <button class="kbtn" data-k="ya">や</button>
+        <button class="kbtn" data-k="ra">ら</button>
+        <button class="kbtn" data-k="wa">わ</button>
+      </div>
+
+      <div class="filter-row">
+        <select class="genre-sel" id="genre-sel"><option value="all">すべてのジャンル</option></select>
+        <input class="srch-inline" id="q" type="text" placeholder="🔍 タレント名で検索...">
+      </div>
+
+      <div class="sort-row">
+        <button class="sort-btn on" data-s="score">スコア順</button>
+        <button class="sort-btn" data-s="kana">五十音順</button>
+        <button class="sort-btn" data-s="genre">ジャンル順</button>
+      </div>
+
       <div class="tlist" id="tlist">
         <div style="padding:20px;text-align:center;color:#94a3b8;font-size:.82rem">読み込み中…</div>
       </div>
@@ -436,19 +502,27 @@ const GENRE_DEMO = {
 };
 const DEMO_DEF = {M10:36,M20:46,M30:51,M40:49,M50:43, F10:49,F20:59,F30:56,F40:51,F50:41};
 
+// ジャンルのあいうえお順定義
+const GENRE_ORDER = ['お笑い芸人','歌手・アーティスト','女優','ジャニーズ系','女性アイドル','俳優','バラエティ','若手・注目株'];
+
 // ── 状態 ──────────────────────────────────────────────────
-let allT = [], selT = [], genre = 'all';
+let allT = [], selT = [], genreFilter = 'all', syllFilter = 'all', sortMode = 'score';
 let mediaType = 'tv';
 let mediaOpts = {};
 let favMap = {}, favDataLoaded = false;
+let recentIds = [], favIds = new Set();
+try { recentIds = JSON.parse(localStorage.getItem('cs_recent') || '[]'); } catch(e) { recentIds = []; }
+try { favIds = new Set(JSON.parse(localStorage.getItem('cs_favs') || '[]')); } catch(e) { favIds = new Set(); }
 
 // ── データ読み込み ─────────────────────────────────────────
 fetch('./scores.json')
   .then(r => { if (!r.ok) throw r.status; return r.json(); })
   .then(d => {
     allT = d.talents;
-    buildGenreBtns();
+    buildFilterControls();
     filterList();
+    renderRecent();
+    renderFavSection();
   })
   .catch(() => {
     document.getElementById('tlist').innerHTML =
@@ -461,47 +535,197 @@ fetch('./favor_scores.json')
   .then(d => { if (d && d.scores) { favMap = d.scores; favDataLoaded = true; } })
   .catch(() => {});
 
-function buildGenreBtns() {
-  const row = document.getElementById('genre-row');
-  [...new Set(allT.map(t => t.genre))].forEach(g => {
-    const b = document.createElement('button');
-    b.className = 'gbtn'; b.dataset.g = g; b.textContent = g;
-    b.onclick = () => setGenre(g);
-    row.appendChild(b);
-  });
-  row.querySelector('[data-g="all"]').onclick = () => setGenre('all');
+// ── あいうえお行判定 ──────────────────────────────────────
+function getSyllRow(t) {
+  const reading = t.reading || t.kana || '';
+  if (reading) {
+    const code = reading.charCodeAt(0);
+    // katakana → hiragana
+    const h = (code >= 0x30A1 && code <= 0x30F6) ? code - 0x60 : code;
+    if (h >= 0x3042 && h <= 0x304A) return 'a';
+    if (h >= 0x304B && h <= 0x3054) return 'ka';
+    if (h >= 0x3055 && h <= 0x305E) return 'sa';
+    if (h >= 0x305F && h <= 0x3069) return 'ta';
+    if (h >= 0x306A && h <= 0x306E) return 'na';
+    if (h >= 0x306F && h <= 0x307D) return 'ha';
+    if (h >= 0x307E && h <= 0x3082) return 'ma';
+    if (h >= 0x3083 && h <= 0x3088) return 'ya';
+    if (h >= 0x3089 && h <= 0x308D) return 'ra';
+    if (h >= 0x308E && h <= 0x3093) return 'wa';
+    return 'other';
+  }
+  // name_en の苗字（末尾語）の頭文字で判定
+  const parts = (t.name_en || '').trim().split(/\s+/);
+  const c = (parts[parts.length - 1] || '')[0]?.toLowerCase() || '';
+  if (!c) return 'other';
+  if (/[aiueo]/.test(c)) return 'a';
+  if (c === 'k') return 'ka';
+  if (c === 's') return 'sa';
+  if (c === 't') return 'ta';
+  if (c === 'n') return 'na';
+  if (c === 'h') return 'ha';
+  if (c === 'm') return 'ma';
+  if (c === 'y') return 'ya';
+  if (c === 'r') return 'ra';
+  if (c === 'w') return 'wa';
+  return 'other';
 }
 
-function setGenre(g) {
-  genre = g;
-  document.querySelectorAll('.gbtn').forEach(b => b.classList.toggle('on', b.dataset.g === g));
-  filterList();
+function getKanaKey(t) {
+  if (t.reading || t.kana) return (t.reading || t.kana);
+  const parts = (t.name_en || '').trim().split(/\s+/);
+  return (parts[parts.length - 1] || '') + ' ' + (parts[0] || '');
 }
 
-function filterList() {
-  const q = document.getElementById('q').value.trim().toLowerCase();
-  const list = allT.filter(t => {
-    if (genre !== 'all' && t.genre !== genre) return false;
-    if (q && !t.name.includes(q) && !(t.name_en || '').toLowerCase().includes(q)) return false;
-    return true;
+// ── フィルターUI構築 ──────────────────────────────────────
+function buildFilterControls() {
+  // ジャンルドロップダウン
+  const genres = [...new Set(allT.map(t => t.genre))].sort((a, b) => {
+    const oi = GENRE_ORDER.indexOf(a), oj = GENRE_ORDER.indexOf(b);
+    if (oi >= 0 && oj >= 0) return oi - oj;
+    if (oi >= 0) return -1; if (oj >= 0) return 1;
+    return a.localeCompare(b, 'ja');
   });
+  const sel = document.getElementById('genre-sel');
+  genres.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g; sel.appendChild(opt);
+  });
+  sel.onchange = () => { genreFilter = sel.value; filterList(); };
+
+  // あいうえお行
+  document.querySelectorAll('.kbtn').forEach(b => {
+    b.onclick = () => {
+      syllFilter = b.dataset.k;
+      document.querySelectorAll('.kbtn').forEach(x => x.classList.toggle('on', x.dataset.k === syllFilter));
+      filterList();
+    };
+  });
+
+  // ソート
+  document.querySelectorAll('.sort-btn').forEach(b => {
+    b.onclick = () => {
+      sortMode = b.dataset.s;
+      document.querySelectorAll('.sort-btn').forEach(x => x.classList.toggle('on', x.dataset.s === sortMode));
+      filterList();
+    };
+  });
+}
+
+// ── タレントアイテム描画 ──────────────────────────────────
+function renderTalentItem(t) {
+  const isSel = selT.some(s => s.id === t.id);
+  const isFull = !isSel && selT.length >= 5;
+  const sc = t.latest?.score ?? '–';
+  const isFav = favIds.has(t.id);
+  return `<div class="ti${isSel?' sel':''}${isFull?' dis':''}" data-id="${t.id}">
+    <div style="min-width:0;flex:1"><div class="ti-name">${t.name}</div><div class="ti-sub">${t.genre}</div></div>
+    <button class="fav-btn${isFav?' on':''}" data-id="${t.id}" title="お気に入り">★</button>
+    <span class="ti-score">${sc}</span>
+  </div>`;
+}
+
+function renderTalentList(list) {
   const el = document.getElementById('tlist');
   if (!list.length) {
     el.innerHTML = '<div style="padding:14px;text-align:center;color:#94a3b8;font-size:.8rem">該当なし</div>';
     return;
   }
-  el.innerHTML = list.slice(0, 100).map(t => {
-    const isSel = selT.some(s => s.id === t.id);
-    const isFull = !isSel && selT.length >= 5;
-    const sc = t.latest?.score ?? '–';
-    return `<div class="ti${isSel?' sel':''}${isFull?' dis':''}" data-id="${t.id}">
-      <div><div class="ti-name">${t.name}</div><div class="ti-sub">${t.genre}</div></div>
-      <span class="ti-score">${sc}</span>
-    </div>`;
-  }).join('');
+  if (sortMode === 'genre') {
+    const groups = {};
+    list.forEach(t => { if (!groups[t.genre]) groups[t.genre] = []; groups[t.genre].push(t); });
+    const sortedG = Object.keys(groups).sort((a, b) => {
+      const oi = GENRE_ORDER.indexOf(a), oj = GENRE_ORDER.indexOf(b);
+      if (oi >= 0 && oj >= 0) return oi - oj;
+      if (oi >= 0) return -1; if (oj >= 0) return 1;
+      return a.localeCompare(b, 'ja');
+    });
+    el.innerHTML = sortedG.map(g =>
+      `<div class="genre-ghd">${g} <span style="font-weight:400;opacity:.6">(${groups[g].length})</span></div>` +
+      groups[g].map(t => renderTalentItem(t)).join('')
+    ).join('');
+  } else {
+    el.innerHTML = list.slice(0, 120).map(t => renderTalentItem(t)).join('');
+  }
   el.querySelectorAll('.ti:not(.dis)').forEach(e => {
     e.onclick = () => toggleT(+e.dataset.id);
   });
+  el.querySelectorAll('.fav-btn').forEach(b => {
+    b.onclick = ev => { ev.stopPropagation(); toggleFav(+b.dataset.id); };
+  });
+}
+
+function filterList() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  let list = allT.filter(t => {
+    if (syllFilter !== 'all' && getSyllRow(t) !== syllFilter) return false;
+    if (genreFilter !== 'all' && t.genre !== genreFilter) return false;
+    if (q && !t.name.includes(q) && !(t.name_en || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  if (sortMode === 'score') {
+    list = list.slice().sort((a, b) => (b.latest?.score ?? 0) - (a.latest?.score ?? 0));
+  } else if (sortMode === 'kana') {
+    list = list.slice().sort((a, b) => getKanaKey(a).localeCompare(getKanaKey(b)));
+  } else {
+    list = list.slice().sort((a, b) => {
+      const oi = GENRE_ORDER.indexOf(a.genre), oj = GENRE_ORDER.indexOf(b.genre);
+      if (oi !== oj) {
+        if (oi >= 0 && oj >= 0) return oi - oj;
+        if (oi >= 0) return -1; if (oj >= 0) return 1;
+      }
+      return (b.latest?.score ?? 0) - (a.latest?.score ?? 0);
+    });
+  }
+  renderTalentList(list);
+}
+
+// ── 最近選んだ / お気に入り ───────────────────────────────
+function renderMiniList(containerId, talents) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = talents.map(t => {
+    const isSel = selT.some(s => s.id === t.id);
+    const isFull = !isSel && selT.length >= 5;
+    return `<div class="mini-ti${isSel?' sel':''}${isFull?' dis':''}" data-id="${t.id}">
+      <span class="mini-ti-name">${t.name}</span>
+      <span class="mini-ti-sub">${t.genre}</span>
+      <span class="mini-ti-score">${t.latest?.score ?? '–'}</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.mini-ti:not(.dis)').forEach(e => {
+    e.onclick = () => toggleT(+e.dataset.id);
+  });
+}
+
+function renderRecent() {
+  const sec = document.getElementById('recent-sec');
+  const recent = recentIds.map(id => allT.find(t => t.id === id)).filter(Boolean);
+  if (!recent.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  renderMiniList('recent-list', recent);
+}
+
+function renderFavSection() {
+  const sec = document.getElementById('fav-sec');
+  const favs = [...favIds].map(id => allT.find(t => t.id === id)).filter(Boolean);
+  if (!favs.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  renderMiniList('fav-list', favs);
+}
+
+function toggleFav(id) {
+  if (favIds.has(id)) favIds.delete(id); else favIds.add(id);
+  try { localStorage.setItem('cs_favs', JSON.stringify([...favIds])); } catch(e) {}
+  filterList();
+  renderFavSection();
+}
+
+function addRecent(id) {
+  recentIds = recentIds.filter(i => i !== id);
+  recentIds.unshift(id);
+  if (recentIds.length > 5) recentIds.length = 5;
+  try { localStorage.setItem('cs_recent', JSON.stringify(recentIds)); } catch(e) {}
+  renderRecent();
 }
 
 function toggleT(id) {
@@ -510,10 +734,12 @@ function toggleT(id) {
   else {
     if (selT.length >= 5) return;
     const t = allT.find(t => t.id === id);
-    if (t) selT.push(t);
+    if (t) { selT.push(t); addRecent(id); }
   }
   filterList();
   renderChips();
+  renderRecent();
+  renderFavSection();
   updateBtn();
 }
 
