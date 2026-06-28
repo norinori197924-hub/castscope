@@ -21,6 +21,8 @@ header{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);color:#fff;pad
 nav{display:flex;gap:6px}
 .nav-link{color:rgba(255,255,255,.7);text-decoration:none;padding:5px 13px;border-radius:6px;font-size:.8rem;transition:all .15s}
 .nav-link:hover,.nav-link.active{background:rgba(255,255,255,.18);color:#fff}
+.nav-info{color:rgba(255,255,255,.85);text-decoration:none;padding:5px 12px;border-radius:6px;font-size:.78rem;border:1px solid rgba(255,255,255,.35);transition:all .15s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.nav-info:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.6);color:#fff}
 
 /* layout */
 .wrap{max-width:1400px;margin:0 auto;padding:20px 14px}
@@ -221,6 +223,7 @@ nav{display:flex;gap:6px}
     <span>キャスティングシミュレーター</span>
   </div>
   <nav>
+    <a href="./about-score.html" target="_blank" class="nav-info">📊 スコア算出ロジックを見る</a>
     <a href="./simulator.html" class="nav-link active">シミュレーター</a>
   </nav>
 </header>

@@ -11,94 +11,105 @@
   --border:#e2e8f0;--success:#10b981;--warn:#f59e0b;--danger:#ef4444;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Arial,'Hiragino Kaku Gothic Pro',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.7}
+body{font-family:'Helvetica Neue',Arial,'Hiragino Kaku Gothic Pro',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.75}
 
-/* header */
+/* ── Header ── */
 header{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);color:#fff;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{display:flex;align-items:baseline;gap:10px}
-.logo h1{font-size:1.6rem;font-weight:800;letter-spacing:.06em}
+.logo h1{font-size:1.5rem;font-weight:800;letter-spacing:.06em}
 .logo span{font-size:.78rem;opacity:.7}
-nav{display:flex;gap:6px}
-.nav-link{color:rgba(255,255,255,.7);text-decoration:none;padding:5px 13px;border-radius:6px;font-size:.8rem;transition:all .15s}
-.nav-link:hover,.nav-link.active{background:rgba(255,255,255,.18);color:#fff}
+nav{display:flex;gap:8px;flex-wrap:wrap}
+.nav-link{color:rgba(255,255,255,.75);text-decoration:none;padding:5px 13px;border-radius:6px;font-size:.8rem;border:1px solid rgba(255,255,255,.3);transition:all .15s;display:flex;align-items:center;gap:4px}
+.nav-link:hover{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.6)}
 
-/* layout */
-.wrap{max-width:900px;margin:0 auto;padding:28px 16px}
+/* ── Layout ── */
+.wrap{max-width:920px;margin:0 auto;padding:28px 16px}
 
-/* section */
-.sec{margin-bottom:28px}
-.sec-title{font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--primary-light);display:flex;align-items:center;gap:8px}
-.sec-icon{font-size:1.1rem}
-.sec-body{font-size:.9rem;line-height:1.8;color:var(--text)}
+/* ── Hero ── */
+.hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);color:#fff;border-radius:12px;padding:30px 28px;margin-bottom:32px}
+.hero h2{font-size:1.35rem;font-weight:800;margin-bottom:10px;letter-spacing:.02em}
+.hero p{font-size:.92rem;opacity:.9;line-height:1.8;max-width:660px}
+.hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.hbadge{padding:4px 13px;border-radius:12px;background:rgba(255,255,255,.18);font-size:.78rem;font-weight:600;border:1px solid rgba(255,255,255,.25)}
 
-/* card */
-.card{background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:16px}
+/* ── Section ── */
+.sec{margin-bottom:36px}
+.sec-title{font-size:1rem;font-weight:800;color:var(--text);margin-bottom:16px;padding-bottom:9px;border-bottom:2px solid var(--primary-light);display:flex;align-items:center;gap:8px}
+.sec-icon{font-size:1.05rem}
 
-/* hero */
-.hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);color:#fff;border-radius:12px;padding:28px 24px;margin-bottom:28px}
-.hero h2{font-size:1.4rem;font-weight:800;margin-bottom:10px}
-.hero p{font-size:.9rem;opacity:.88;line-height:1.75;max-width:640px}
-.hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-.hbadge{padding:4px 12px;border-radius:12px;background:rgba(255,255,255,.18);font-size:.78rem;font-weight:600}
+/* ── Metric cards ── */
+.metric-grid{display:flex;flex-direction:column;gap:14px}
+.mc{background:var(--card);border-radius:10px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.mc-head{display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,#f8faff,var(--card));border-bottom:1px solid var(--border)}
+.mc-num{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mc-title{font-weight:800;font-size:.92rem;flex:1}
+.mc-weight{padding:3px 11px;border-radius:10px;background:var(--primary-light);color:var(--primary);font-size:.78rem;font-weight:700;white-space:nowrap}
+.mc-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.mc-cell{padding:13px 18px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.mc-cell:nth-child(2n){border-right:none}
+.mc-cell:nth-last-child(-n+2){border-bottom:none}
+.mc-cell-title{font-size:.72rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.mc-cell-body{font-size:.84rem;line-height:1.65;color:var(--text)}
+.mc-scene{background:#f8faff}
+.mc-tag{display:inline-block;padding:1px 7px;border-radius:5px;background:var(--primary-light);color:var(--primary);font-size:.73rem;font-weight:600;margin-right:3px}
 
-/* metric table */
-table{width:100%;border-collapse:collapse;font-size:.85rem}
-th{background:var(--bg);color:var(--muted);font-weight:700;text-align:left;padding:9px 12px;border-bottom:2px solid var(--border);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
-td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#f8faff}
-.metric-name{font-weight:700;color:var(--text)}
-.metric-sub{font-size:.75rem;color:var(--muted);margin-top:2px}
-.weight-pill{display:inline-block;padding:2px 10px;border-radius:10px;background:var(--primary-light);color:var(--primary);font-weight:700;font-size:.82rem}
-.source-tag{display:inline-block;padding:2px 8px;border-radius:5px;background:#f1f5f9;color:var(--muted);font-size:.75rem;border:1px solid var(--border)}
+/* ── Heatmap ── */
+.heat-wrap{overflow-x:auto;background:var(--card);border-radius:10px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.heat-table{width:100%;border-collapse:collapse;font-size:.84rem;min-width:580px}
+.heat-table th{padding:9px 12px;text-align:center;font-size:.73rem;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border)}
+.heat-table th.lh{text-align:left;min-width:110px}
+.heat-table td{padding:9px 12px;text-align:center;border:1px solid var(--border);font-weight:700;font-size:.83rem;cursor:default}
+.heat-table td.lc{text-align:left;font-weight:700;color:var(--text);background:var(--card);white-space:nowrap}
+.heat-legend{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--border);font-size:.75rem;color:var(--muted)}
+.heat-grad{width:100px;height:9px;border-radius:4px;background:linear-gradient(90deg,#dbeafe,#2563eb)}
 
-/* heatmap table */
-.heat-wrap{overflow-x:auto}
-.heat-table{width:100%;border-collapse:collapse;font-size:.83rem;min-width:620px}
-.heat-table th{padding:8px 10px;text-align:center;font-size:.74rem;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border)}
-.heat-table th.row-head{text-align:left;min-width:100px}
-.heat-table td{padding:8px 10px;text-align:center;border:1px solid var(--border);font-weight:600;font-size:.82rem;transition:opacity .15s;cursor:default}
-.heat-table td.row-lbl{text-align:left;font-weight:700;color:var(--text);background:var(--bg)}
-.heat-legend{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.76rem;color:var(--muted)}
-.heat-grad{width:120px;height:10px;border-radius:4px;background:linear-gradient(90deg,#dbeafe,#2563eb)}
+/* ── Formula ── */
+.formula-card{background:var(--card);border-radius:10px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.formula-head{padding:13px 18px;background:var(--bg);border-bottom:1px solid var(--border);font-weight:800;font-size:.88rem;color:var(--text)}
+.formula-math{background:#0f172a;padding:18px 22px;font-family:'Courier New',monospace;font-size:.86rem;color:#e2e8f0;line-height:1.9}
+.f-main{color:#93c5fd;font-size:.94rem;font-weight:700}
+.formula-table{width:100%;border-collapse:collapse}
+.formula-table th{background:#f8faff;font-size:.76rem;font-weight:700;color:var(--muted);padding:8px 14px;text-align:left;border-bottom:2px solid var(--border)}
+.formula-table td{padding:9px 14px;border-bottom:1px solid var(--border);font-size:.85rem}
+.formula-table tr:last-child td{border-bottom:none;font-weight:800;background:#f0f7ff;color:var(--primary)}
+.formula-table td:nth-child(3),.formula-table th:nth-child(3){text-align:center}
+.formula-table td:nth-child(4),.formula-table th:nth-child(4){text-align:right;font-family:'Courier New',monospace}
 
-/* formula box */
-.formula-box{background:#0f172a;border-radius:10px;padding:20px 24px;font-family:'Courier New',monospace;font-size:.85rem;color:#e2e8f0;line-height:2}
-.f-main{color:#93c5fd;font-size:.95rem;font-weight:700;margin-bottom:8px}
-.f-row{display:flex;justify-content:space-between;padding:2px 0}
-.f-label{color:#94a3b8}
-.f-val{color:#fbbf24;font-weight:700}
-.f-result{color:#34d399;font-weight:800;font-size:1rem;border-top:1px solid #334155;margin-top:8px;padding-top:8px}
-.f-sep{color:#475569}
+/* ── Layer guide ── */
+.layer-stack{display:flex;flex-direction:column;gap:12px}
+.layer-item{background:var(--card);border-radius:10px;border:1px solid var(--border);display:flex;gap:0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.layer-accent{width:5px;flex-shrink:0}
+.layer-content{padding:14px 18px;flex:1}
+.layer-head{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.layer-icon{font-size:1rem}
+.layer-title{font-weight:800;font-size:.9rem}
+.layer-badge{padding:2px 9px;border-radius:9px;font-size:.72rem;font-weight:700;margin-left:auto;white-space:nowrap}
+.layer-body{font-size:.84rem;line-height:1.7;color:var(--muted)}
+.layer-ex{margin-top:7px;padding:7px 12px;background:var(--bg);border-radius:6px;font-size:.8rem;color:var(--text);border-left:3px solid var(--border)}
+.layer-ex strong{color:var(--primary)}
 
-/* guide */
-.guide-item{display:flex;gap:14px;padding:13px 0;border-bottom:1px solid var(--border)}
-.guide-item:last-child{border-bottom:none}
-.guide-num{width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
-.guide-body{}
-.guide-title{font-weight:700;font-size:.87rem;margin-bottom:4px}
-.guide-text{font-size:.83rem;color:var(--muted);line-height:1.65}
-.guide-tag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--primary-light);color:var(--primary);font-size:.72rem;font-weight:600;margin-right:4px}
+/* ── Schedule ── */
+.schedule-card{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:18px 20px;display:flex;gap:16px;align-items:flex-start;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.schedule-icon{font-size:2rem;flex-shrink:0;line-height:1}
+.schedule-body p{font-size:.87rem;line-height:1.75;color:var(--text)}
+.schedule-body strong{color:var(--primary)}
 
-/* layer cards */
-.layer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:12px}
-.layer-card{border-radius:8px;padding:14px;border:1.5px solid var(--border)}
-.layer-card-head{font-size:.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-.layer-card-body{font-size:.83rem;line-height:1.65;color:var(--text)}
-
-/* footer */
+/* ── Footer ── */
 footer{background:var(--card);border-top:1px solid var(--border);padding:20px 28px;margin-top:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.footer-links{display:flex;gap:12px}
-.footer-link{color:var(--primary);text-decoration:none;font-size:.83rem;font-weight:600;padding:6px 14px;border:1.5px solid var(--primary);border-radius:7px;transition:all .15s}
-.footer-link:hover{background:var(--primary);color:#fff}
-.footer-copy{font-size:.75rem;color:var(--muted)}
+.footer-links{display:flex;gap:10px;flex-wrap:wrap}
+.footer-btn{color:var(--primary);text-decoration:none;font-size:.83rem;font-weight:700;padding:7px 16px;border:1.5px solid var(--primary);border-radius:7px;transition:all .15s;display:flex;align-items:center;gap:5px}
+.footer-btn:hover{background:var(--primary);color:#fff}
+.footer-copy{font-size:.74rem;color:var(--muted)}
 
-@media(max-width:640px){
+@media(max-width:700px){
+  .mc-body{grid-template-columns:1fr}
+  .mc-cell:nth-child(2n){border-right:1px solid var(--border)}
+  .mc-cell:nth-last-child(-n+2){border-bottom:1px solid var(--border)}
+  .mc-cell:last-child{border-bottom:none}
   header{padding:12px 16px}
   .logo h1{font-size:1.25rem}
   .wrap{padding:18px 12px}
   .hero{padding:20px 16px}
-  .formula-box{font-size:.76rem;padding:16px}
 }
 </style>
 </head>
@@ -111,7 +122,7 @@ footer{background:var(--card);border-top:1px solid var(--border);padding:20px 28
   </div>
   <nav>
     <a href="./index.html" class="nav-link">← ダッシュボード</a>
-    <a href="./simulator.html" class="nav-link">シミュレーター</a>
+    <a href="./simulator.html" class="nav-link">🎬 シミュレーター</a>
   </nav>
 </header>
 
@@ -119,105 +130,235 @@ footer{background:var(--card);border-top:1px solid var(--border);padding:20px 28
 
   <!-- Hero -->
   <div class="hero">
-    <h2>CastScopeスコアとは</h2>
-    <p>6つのデータ指標を組み合わせ、タレントの「社会的注目度・好感度・メディア適性」をリアルタイムに数値化したスコアです。Google Trends・YouTube・ニュース・Wikipedia・感情分析の5データソースから毎週自動収集し、起用するメディアに応じて重み係数を動的に調整します。</p>
+    <h2>CastScope スコアとは</h2>
+    <p>タレントの「社会的注目度・好感度・メディア適性」を6つの指標から数値化し、メディア種別に応じた重み付けで総合スコアを算出するキャスティング支援ツールです。データは毎週月曜 AM 6:00 に GitHub Actions で自動収集されます。</p>
     <div class="hero-badges">
       <span class="hbadge">📊 6指標</span>
       <span class="hbadge">📡 5データソース</span>
       <span class="hbadge">📺 7メディア重み</span>
-      <span class="hbadge">🔄 毎週自動更新</span>
+      <span class="hbadge">🔄 毎週月曜 自動更新</span>
+      <span class="hbadge">👥 300名収録</span>
     </div>
   </div>
 
-  <!-- Section 1: 指標別の算出方法 -->
+  <!-- Section 1: 6指標の詳細 -->
   <div class="sec">
-    <div class="sec-title"><span class="sec-icon">📐</span>指標別の算出方法</div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <table>
+    <div class="sec-title"><span class="sec-icon">📐</span>6指標の詳細</div>
+    <div class="metric-grid">
+
+      <!-- ① Google Trends -->
+      <div class="mc">
+        <div class="mc-head">
+          <div class="mc-num">①</div>
+          <div class="mc-title">Google Trends スコア</div>
+          <div class="mc-weight">基本ウェイト 25%</div>
+        </div>
+        <div class="mc-body">
+          <div class="mc-cell">
+            <div class="mc-cell-title">何を測るか</div>
+            <div class="mc-cell-body">過去90日間における検索関心度の高さ。Google Trends APIから取得し、0〜100で正規化。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">なぜ重要か</div>
+            <div class="mc-cell-body">検索需要はタレントへの「今の関心」を最もリアルタイムに反映する指標。出演発表・受賞・スキャンダルなどのイベント直後に急上昇する。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">算出方法</div>
+            <div class="mc-cell-body"><code>collect_sns.py</code> が Google Trends API を呼び出し、直近90日の週次データを取得 → 最大値で正規化（0〜100）→ SQLiteに保存。</div>
+          </div>
+          <div class="mc-cell mc-scene">
+            <div class="mc-cell-title">活用シーン</div>
+            <div class="mc-cell-body">
+              <span class="mc-tag">テレビ 30%</span><span class="mc-tag">WEB 25%</span><span class="mc-tag">CM 25%</span><br>
+              <span style="font-size:.8rem;color:var(--muted);margin-top:4px;display:block">旬のタイミングでの起用判断に有効。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② YouTube平均再生数 -->
+      <div class="mc">
+        <div class="mc-head">
+          <div class="mc-num">②</div>
+          <div class="mc-title">YouTube 平均再生数</div>
+          <div class="mc-weight">基本ウェイト 25%</div>
+        </div>
+        <div class="mc-body">
+          <div class="mc-cell">
+            <div class="mc-cell-title">何を測るか</div>
+            <div class="mc-cell-body">YouTubeの直近動画における平均再生数。YouTube Data API から公式チャンネルの最新20本を取得して平均算出。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">なぜ重要か</div>
+            <div class="mc-cell-body">動画コンテンツでの「実際に見られている数」を示す実績指標。フォロワー数より実態を正確に反映する。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">算出方法</div>
+            <div class="mc-cell-body">YouTube Data API → 最新20本の再生数を取得 → 平均値を算出 → log<sub>10</sub> スケールで正規化（0〜100）。</div>
+          </div>
+          <div class="mc-cell mc-scene">
+            <div class="mc-cell-title">活用シーン</div>
+            <div class="mc-cell-body">
+              <span class="mc-tag">SNS 30%</span><span class="mc-tag">映画 25%</span><span class="mc-tag">WEB 25%</span><br>
+              <span style="font-size:.8rem;color:var(--muted);margin-top:4px;display:block">動画コンテンツとの親和性判断に有効。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ ニュース件数 -->
+      <div class="mc">
+        <div class="mc-head">
+          <div class="mc-num">③</div>
+          <div class="mc-title">ニュース件数</div>
+          <div class="mc-weight">基本ウェイト 15%</div>
+        </div>
+        <div class="mc-body">
+          <div class="mc-cell">
+            <div class="mc-cell-title">何を測るか</div>
+            <div class="mc-cell-body">過去30日間にタレント名が登場したニュース記事の件数。Google News RSS から収集。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">なぜ重要か</div>
+            <div class="mc-cell-body">メディア露出の量的指標。件数が多いほど社会的認知が広がっている状態を示す。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">算出方法</div>
+            <div class="mc-cell-body">Google News RSS でタレント名を検索 → 30日間の件数をカウント → 件数÷3（上限100）として正規化。</div>
+          </div>
+          <div class="mc-cell mc-scene">
+            <div class="mc-cell-title">活用シーン</div>
+            <div class="mc-cell-body">
+              <span class="mc-tag">新聞 35%</span><span class="mc-tag">映画 20%</span><span class="mc-tag">テレビ 20%</span><br>
+              <span style="font-size:.8rem;color:var(--muted);margin-top:4px;display:block">パブリシティ実績の判断に有効。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ Wikipedia閲覧数 -->
+      <div class="mc">
+        <div class="mc-head">
+          <div class="mc-num">④</div>
+          <div class="mc-title">Wikipedia 閲覧数</div>
+          <div class="mc-weight">基本ウェイト 10%</div>
+        </div>
+        <div class="mc-body">
+          <div class="mc-cell">
+            <div class="mc-cell-title">何を測るか</div>
+            <div class="mc-cell-body">Wikipedia の該当タレントページの月間閲覧数。Wikipedia Pageviews API から取得。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">なぜ重要か</div>
+            <div class="mc-cell-body">「調べようとする人の数」＝認知の深さを示す指標。検索とは異なり、より能動的・詳細な関心を反映する。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">算出方法</div>
+            <div class="mc-cell-body">Wikipedia Pageviews API → 直近30日の合計閲覧数を取得 → 全タレント中の最大値で正規化（0〜100）。</div>
+          </div>
+          <div class="mc-cell mc-scene">
+            <div class="mc-cell-title">活用シーン</div>
+            <div class="mc-cell-body">
+              <span class="mc-tag">映画 15%</span><span class="mc-tag">新聞 15%</span><span class="mc-tag">出版 10%</span><br>
+              <span style="font-size:.8rem;color:var(--muted);margin-top:4px;display:block">コアファン層の深さ判断に有効。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ ニュース感情スコア -->
+      <div class="mc">
+        <div class="mc-head">
+          <div class="mc-num">⑤</div>
+          <div class="mc-title">ニュース感情スコア</div>
+          <div class="mc-weight">基本ウェイト 15%</div>
+        </div>
+        <div class="mc-body">
+          <div class="mc-cell">
+            <div class="mc-cell-title">何を測るか</div>
+            <div class="mc-cell-body">ニュース記事の内容がポジティブかネガティブかを数値化したスコア。0〜100（100＝完全ポジティブ）。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">なぜ重要か</div>
+            <div class="mc-cell-body">件数が多くても炎上・批判記事が多ければブランドリスクになる。量（ニュース件数）と質（感情）を分けて評価することが重要。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">算出方法</div>
+            <div class="mc-cell-body">収集したニュース記事にポジ/ネガキーワードを適用 → ポジ率をスコア化（0〜100）→ 100に近いほどポジティブな報道が多い状態。</div>
+          </div>
+          <div class="mc-cell mc-scene">
+            <div class="mc-cell-title">活用シーン</div>
+            <div class="mc-cell-body">
+              <span class="mc-tag">CM 30%</span><span class="mc-tag">出版 25%</span><span class="mc-tag">新聞 20%</span><br>
+              <span style="font-size:.8rem;color:var(--muted);margin-top:4px;display:block">ブランドセーフティの判断に最も直結する指標。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑥ YouTubeチャンネル登録者数 -->
+      <div class="mc">
+        <div class="mc-head">
+          <div class="mc-num">⑥</div>
+          <div class="mc-title">YouTube チャンネル登録者数</div>
+          <div class="mc-weight">基本ウェイト 10%</div>
+        </div>
+        <div class="mc-body">
+          <div class="mc-cell">
+            <div class="mc-cell-title">何を測るか</div>
+            <div class="mc-cell-body">YouTube 公式チャンネルの登録者数。固定ファン層の規模を示す「基盤指標」。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">なぜ重要か</div>
+            <div class="mc-cell-body">再生数が一時的に変動しても登録者数は安定した影響力を示す。長期起用・継続契約の判断に適している。</div>
+          </div>
+          <div class="mc-cell">
+            <div class="mc-cell-title">算出方法</div>
+            <div class="mc-cell-body">YouTube Data API → チャンネル登録者数を取得 → log<sub>10</sub> スケールで正規化（0〜100）。</div>
+          </div>
+          <div class="mc-cell mc-scene">
+            <div class="mc-cell-title">活用シーン</div>
+            <div class="mc-cell-body">
+              <span class="mc-tag">SNS 25%</span><span class="mc-tag">出版 20%</span><span class="mc-tag">CM 10%</span><br>
+              <span style="font-size:.8rem;color:var(--muted);margin-top:4px;display:block">長期的なファン基盤の判断に有効。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /metric-grid -->
+  </div>
+
+  <!-- Section 2: ヒートマップ -->
+  <div class="sec">
+    <div class="sec-title"><span class="sec-icon">🎯</span>メディア別の重み係数</div>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:14px;line-height:1.7">起用メディアによって各指標の重みが動的に変化します。セルが濃いほど重要度が高い指標です。例えばCMでは感情スコアが最重要（30%）、SNSではYT再生数と登録者数が上位を占めます。</p>
+    <div class="heat-wrap">
+      <table class="heat-table" id="heat-table">
         <thead>
           <tr>
-            <th style="min-width:160px">指標</th>
-            <th style="min-width:90px">基本ウェイト</th>
-            <th>データソース</th>
-            <th style="min-width:180px">収集タイミング</th>
+            <th class="lh">メディア</th>
+            <th>Trends</th>
+            <th>YT再生数</th>
+            <th>ニュース</th>
+            <th>Wiki</th>
+            <th>感情</th>
+            <th>YT登録者</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td><div class="metric-name">Google Trends</div><div class="metric-sub">直近30日の検索トレンドを0〜100で正規化</div></td>
-            <td><span class="weight-pill">25%</span></td>
-            <td><span class="source-tag">Google Trends API</span></td>
-            <td>毎週月曜 AM 6:00 自動収集</td>
-          </tr>
-          <tr>
-            <td><div class="metric-name">YouTube 平均再生数</div><div class="metric-sub">直近動画の平均再生数をlog10スケールで正規化</div></td>
-            <td><span class="weight-pill">25%</span></td>
-            <td><span class="source-tag">YouTube Data API v3</span></td>
-            <td>毎週月曜 AM 6:00 自動収集</td>
-          </tr>
-          <tr>
-            <td><div class="metric-name">ニュース件数</div><div class="metric-sub">直近30日の報道件数（上限300件）</div></td>
-            <td><span class="weight-pill">15%</span></td>
-            <td><span class="source-tag">Google News RSS</span></td>
-            <td>毎週月曜 AM 6:00 自動収集</td>
-          </tr>
-          <tr>
-            <td><div class="metric-name">Wikipedia 閲覧数</div><div class="metric-sub">直近7日間のページビュー数</div></td>
-            <td><span class="weight-pill">10%</span></td>
-            <td><span class="source-tag">Wikipedia API</span></td>
-            <td>毎週月曜 AM 6:00 自動収集</td>
-          </tr>
-          <tr>
-            <td><div class="metric-name">ニュース感情スコア</div><div class="metric-sub">ポジティブ/ネガティブキーワード比率（0〜100）</div></td>
-            <td><span class="weight-pill">15%</span></td>
-            <td><span class="source-tag">Google News RSS</span> <span class="source-tag">感情分析</span></td>
-            <td>毎週月曜 AM 6:00 自動収集</td>
-          </tr>
-          <tr>
-            <td><div class="metric-name">YouTube チャンネル登録者数</div><div class="metric-sub">公式チャンネルの登録者数をlog10スケールで正規化</div></td>
-            <td><span class="weight-pill">10%</span></td>
-            <td><span class="source-tag">YouTube Data API v3</span></td>
-            <td>毎週月曜 AM 6:00 自動収集</td>
-          </tr>
+          <tr><td class="lc">📺 テレビ</td>    <td data-v="30">30%</td><td data-v="20">20%</td><td data-v="20">20%</td><td data-v="10">10%</td><td data-v="15">15%</td><td data-v="5">5%</td></tr>
+          <tr><td class="lc">📣 CM</td>        <td data-v="25">25%</td><td data-v="15">15%</td><td data-v="15">15%</td><td data-v="5">5%</td><td data-v="30">30%</td><td data-v="10">10%</td></tr>
+          <tr><td class="lc">🎬 映画</td>      <td data-v="20">20%</td><td data-v="25">25%</td><td data-v="20">20%</td><td data-v="15">15%</td><td data-v="15">15%</td><td data-v="5">5%</td></tr>
+          <tr><td class="lc">📚 出版（雑誌）</td><td data-v="15">15%</td><td data-v="10">10%</td><td data-v="20">20%</td><td data-v="10">10%</td><td data-v="25">25%</td><td data-v="20">20%</td></tr>
+          <tr><td class="lc">🗞 新聞</td>       <td data-v="20">20%</td><td data-v="5">5%</td><td data-v="35">35%</td><td data-v="15">15%</td><td data-v="20">20%</td><td data-v="5">5%</td></tr>
+          <tr><td class="lc">📱 SNS</td>        <td data-v="20">20%</td><td data-v="30">30%</td><td data-v="10">10%</td><td data-v="5">5%</td><td data-v="10">10%</td><td data-v="25">25%</td></tr>
+          <tr><td class="lc">🌐 WEBサイト</td>  <td data-v="25">25%</td><td data-v="25">25%</td><td data-v="15">15%</td><td data-v="10">10%</td><td data-v="15">15%</td><td data-v="10">10%</td></tr>
         </tbody>
       </table>
-    </div>
-  </div>
-
-  <!-- Section 2: メディア別の重み係数 -->
-  <div class="sec">
-    <div class="sec-title"><span class="sec-icon">🎯</span>メディア別の重み係数</div>
-    <p class="sec-body" style="margin-bottom:14px">起用するメディアによって各指標の重みが動的に変化します。例えばCMでは感情スコアの比重が最大（30%）になり、SNS起用ではYouTube再生数とチャンネル登録者数の比重が高まります。セルの色が濃いほど重要度が高い指標です。</p>
-    <div class="card" style="padding:16px">
-      <div class="heat-wrap">
-        <table class="heat-table" id="heat-table">
-          <thead>
-            <tr>
-              <th class="row-head">メディア</th>
-              <th>Trends</th>
-              <th>YT再生数</th>
-              <th>ニュース</th>
-              <th>Wiki</th>
-              <th>感情</th>
-              <th>YT登録者</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td class="row-lbl">📺 テレビ</td>    <td data-val="30">30%</td><td data-val="20">20%</td><td data-val="20">20%</td><td data-val="10">10%</td><td data-val="15">15%</td><td data-val="5">5%</td></tr>
-            <tr><td class="row-lbl">📣 CM</td>        <td data-val="25">25%</td><td data-val="15">15%</td><td data-val="15">15%</td><td data-val="5">5%</td><td data-val="30">30%</td><td data-val="10">10%</td></tr>
-            <tr><td class="row-lbl">🎬 映画</td>      <td data-val="20">20%</td><td data-val="25">25%</td><td data-val="20">20%</td><td data-val="15">15%</td><td data-val="15">15%</td><td data-val="5">5%</td></tr>
-            <tr><td class="row-lbl">📚 出版（雑誌）</td><td data-val="15">15%</td><td data-val="10">10%</td><td data-val="20">20%</td><td data-val="10">10%</td><td data-val="25">25%</td><td data-val="20">20%</td></tr>
-            <tr><td class="row-lbl">🗞 新聞</td>       <td data-val="20">20%</td><td data-val="5">5%</td><td data-val="35">35%</td><td data-val="15">15%</td><td data-val="20">20%</td><td data-val="5">5%</td></tr>
-            <tr><td class="row-lbl">📱 SNS</td>        <td data-val="20">20%</td><td data-val="30">30%</td><td data-val="10">10%</td><td data-val="5">5%</td><td data-val="10">10%</td><td data-val="25">25%</td></tr>
-            <tr><td class="row-lbl">🌐 WEBサイト</td>  <td data-val="25">25%</td><td data-val="25">25%</td><td data-val="15">15%</td><td data-val="10">10%</td><td data-val="15">15%</td><td data-val="10">10%</td></tr>
-          </tbody>
-        </table>
-      </div>
       <div class="heat-legend">
-        <span>低</span>
-        <div class="heat-grad"></div>
-        <span>高</span>
-        <span style="margin-left:8px">重み係数の強さ</span>
+        <span>低</span><div class="heat-grad"></div><span>高</span>
+        <span style="margin-left:10px">重み係数の強さ</span>
       </div>
     </div>
   </div>
@@ -225,78 +366,137 @@ footer{background:var(--card);border-top:1px solid var(--border);padding:20px 28
   <!-- Section 3: 計算式 -->
   <div class="sec">
     <div class="sec-title"><span class="sec-icon">🔢</span>総合スコアの計算式</div>
-    <div class="card">
-      <div class="formula-box">
+    <div class="formula-card">
+      <div class="formula-head">計算式</div>
+      <div class="formula-math">
         <div class="f-main">総合スコア = Σ（各指標の正規化値 × メディア別重み係数）</div>
-        <div style="margin:12px 0 8px;color:#64748b;font-size:.78rem;font-family:sans-serif">計算例：テレビ × ドラマ 選択時</div>
-        <div class="f-row"><span class="f-label">Trends(70)        × 0.30</span><span class="f-val">= 21.00</span></div>
-        <div class="f-row"><span class="f-label">YT再生数(60)      × 0.20</span><span class="f-val">= 12.00</span></div>
-        <div class="f-row"><span class="f-label">ニュース(50)      × 0.20</span><span class="f-val">= 10.00</span></div>
-        <div class="f-row"><span class="f-label">Wikipedia(80)     × 0.10</span><span class="f-val">=  8.00</span></div>
-        <div class="f-row"><span class="f-label">感情(75)          × 0.15</span><span class="f-val">= 11.25</span></div>
-        <div class="f-row"><span class="f-label">YT登録者(40)      × 0.05</span><span class="f-val">=  2.00</span></div>
-        <div class="f-result">スコア = 21 + 12 + 10 + 8 + 11.25 + 2 = <span style="color:#fde68a">64.25 点</span></div>
       </div>
-      <div style="margin-top:14px;font-size:.84rem;color:var(--muted);line-height:1.7">
-        各指標の正規化値は 0〜100 のスケールに変換されます。YouTube再生数・登録者数は log10 スケールで正規化され、数値の急激な差を平滑化します。ニュース件数は件数÷3（上限100）として計算します。
+      <div class="formula-head" style="border-top:1px solid var(--border)">具体的な計算例（テレビ × ドラマ 選択時）</div>
+      <div style="padding:0">
+        <table class="formula-table">
+          <thead>
+            <tr>
+              <th>指標</th>
+              <th>実測値（正規化）</th>
+              <th style="text-align:center">重み</th>
+              <th style="text-align:right">計算</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Google Trends</td><td>70点</td><td style="text-align:center">30%</td><td style="text-align:right;font-family:monospace">70 × 0.30 = 21.00</td></tr>
+            <tr><td>YT平均再生数</td><td>60点</td><td style="text-align:center">20%</td><td style="text-align:right;font-family:monospace">60 × 0.20 = 12.00</td></tr>
+            <tr><td>ニュース件数</td><td>50点</td><td style="text-align:center">20%</td><td style="text-align:right;font-family:monospace">50 × 0.20 = 10.00</td></tr>
+            <tr><td>Wikipedia閲覧数</td><td>80点</td><td style="text-align:center">10%</td><td style="text-align:right;font-family:monospace">80 × 0.10 = &nbsp;8.00</td></tr>
+            <tr><td>ニュース感情</td><td>75点</td><td style="text-align:center">15%</td><td style="text-align:right;font-family:monospace">75 × 0.15 = 11.25</td></tr>
+            <tr><td>YTチャンネル登録者</td><td>40点</td><td style="text-align:center">5%</td><td style="text-align:right;font-family:monospace">40 × 0.05 = &nbsp;2.00</td></tr>
+            <tr><td><strong>総合スコア</strong></td><td></td><td></td><td style="text-align:right;font-family:monospace"><strong>= 64.25点</strong></td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- Section 4: シミュレーターの見方 -->
+  <!-- Section 4: AI考察の読み方 -->
   <div class="sec">
-    <div class="sec-title"><span class="sec-icon">📋</span>シミュレーターの見方</div>
-    <div class="card">
-      <div class="guide-item">
-        <div class="guide-num">1</div>
-        <div class="guide-body">
-          <div class="guide-title">メディア選択でスコアが変動する理由</div>
-          <div class="guide-text">選択したメディアに応じて重み係数が切り替わります。例えば「CM」を選択すると感情スコアの重みが30%に上昇し、ブランドセーフティを重視した評価になります。「SNS」では YouTube 指標の比重が高まり、拡散力・フォロワー力が強調されます。</div>
+    <div class="sec-title"><span class="sec-icon">🤖</span>AI考察の読み方</div>
+    <div class="layer-stack">
+
+      <div class="layer-item">
+        <div class="layer-accent" style="background:#2563eb"></div>
+        <div class="layer-content">
+          <div class="layer-head">
+            <span class="layer-icon">📡</span>
+            <span class="layer-title">Layer 1｜メディア適性評価</span>
+            <span class="layer-badge" style="background:var(--primary-light);color:var(--primary)">常時表示</span>
+          </div>
+          <div class="layer-body">選択したメディア（テレビ/CM/映画など）において最重要な指標を中心に評価した考察。全タレント中の相対順位（上位X%）も表示。</div>
+          <div class="layer-ex">例：CMでは感情スコアが30%ウェイトのため、<strong>「感情スコアが高く、ブランドへの好感転移が生まれやすい構成です」</strong> などと評価。</div>
         </div>
       </div>
-      <div class="guide-item">
-        <div class="guide-num">2</div>
-        <div class="guide-body">
-          <div class="guide-title">キャスティング評価パネルの読み方</div>
-          <div class="guide-text">
-            <span class="guide-tag">推定指標値</span>選択メディアの推定成果（視聴率/認知率など）の予測範囲<br>
-            <span class="guide-tag">SNSバズスコア</span>メディア別重み計算によるバズ期待値（0〜100）<br>
-            <span class="guide-tag">相性スコア</span>選択タレントの組み合わせ適性（多様性・バランス）<br>
-            <span class="guide-tag">炎上リスク</span>ニュース件数と感情スコアから算出したリスク指標
+
+      <div class="layer-item">
+        <div class="layer-accent" style="background:#059669"></div>
+        <div class="layer-content">
+          <div class="layer-head">
+            <span class="layer-icon">🎯</span>
+            <span class="layer-title">Layer 2｜ジャンル適性評価</span>
+            <span class="layer-badge" style="background:#d1fae5;color:#065f46">常時表示</span>
+          </div>
+          <div class="layer-body">メディアのサブ設定（ジャンル・ターゲット・形態）に応じた詳細考察。テレビ×ドラマとテレビ×バラエティでは重視ポイントが異なる。トレンド判定（高水準/安定/控えめ）も付加。</div>
+          <div class="layer-ex">例：テレビ×ドラマ選択時 → <strong>「感情移入度と話題継続性が鍵。Wiki PVが高く映画ファン層からの事前期待値が形成されている」</strong> と評価。</div>
+        </div>
+      </div>
+
+      <div class="layer-item">
+        <div class="layer-accent" style="background:#ef4444"></div>
+        <div class="layer-content">
+          <div class="layer-head">
+            <span class="layer-icon">⚠️</span>
+            <span class="layer-title">リスク評価</span>
+            <span class="layer-badge" style="background:#fee2e2;color:#991b1b">常時表示</span>
+          </div>
+          <div class="layer-body">感情スコアの平均値に基づく炎上リスクの3段階判定。感情スコアが低い個別タレントへのリスク警告も表示。</div>
+          <div class="layer-ex">
+            感情60点以上 → <strong style="color:#059669">リスク低：ブランドセーフティは良好</strong><br>
+            感情40〜59点 → <strong style="color:#d97706">リスク中：継続モニタリングを推奨</strong><br>
+            感情40点未満 → <strong style="color:#dc2626">リスク高：起用前に詳細調査を推奨</strong>
           </div>
         </div>
       </div>
-      <div class="guide-item">
-        <div class="guide-num">3</div>
-        <div class="guide-body">
-          <div class="guide-title">AI考察の3層＋拡張構造</div>
-          <div class="layer-grid">
-            <div class="layer-card" style="border-color:#bfdbfe">
-              <div class="layer-card-head" style="color:#2563eb">📡 メディア適性</div>
-              <div class="layer-card-body">選択メディアで最重要な指標に基づく評価。全タレント中の相対順位（上位X%）も表示。</div>
-            </div>
-            <div class="layer-card" style="border-color:#bbf7d0">
-              <div class="layer-card-head" style="color:#059669">🎯 ジャンル適性</div>
-              <div class="layer-card-body">サブ設定（ドラマ/Instagram/主演など）に応じた詳細評価。トレンド判定付き。</div>
-            </div>
-            <div class="layer-card" style="border-color:#fecaca">
-              <div class="layer-card-head" style="color:#dc2626">⚠️ リスク評価</div>
-              <div class="layer-card-body">感情スコアベースの炎上リスク3段階判定。個別タレントの警告も表示。</div>
-            </div>
-            <div class="layer-card" style="border-color:#fde68a">
-              <div class="layer-card-head" style="color:#d97706">👥 主要ターゲット</div>
-              <div class="layer-card-body">年代×性別の視聴意向マップから最高スコアのセグメントを特定して表示。</div>
-            </div>
-            <div class="layer-card" style="border-color:#e9d5ff">
-              <div class="layer-card-head" style="color:#7c3aed">🤝 キャスティング評価</div>
-              <div class="layer-card-body">2人以上選択時のみ表示。バランス型/対比型の組み合わせ分析。</div>
-            </div>
-            <div class="layer-card" style="border-color:#fed7aa">
-              <div class="layer-card-head" style="color:#ea580c">🏆 総合推奨度</div>
-              <div class="layer-card-body">相性・バズ・適性・リスクの総合評価。★1〜5の5段階で推奨レベルを表示。</div>
-            </div>
+
+      <div class="layer-item">
+        <div class="layer-accent" style="background:#f59e0b"></div>
+        <div class="layer-content">
+          <div class="layer-head">
+            <span class="layer-icon">👥</span>
+            <span class="layer-title">主要ターゲット</span>
+            <span class="layer-badge" style="background:#fef3c7;color:#92400e">常時表示</span>
+          </div>
+          <div class="layer-body">年代×性別の視聴意向マップデータから最高スコアのセグメントを特定して表示。F1層（20〜34歳女性）・M2層（40代男性）などの業界標準セグメントで表記。</div>
+          <div class="layer-ex">例：<strong>「このキャスティングはF1層（20代女性）への訴求力が特に高い構成です（意向スコア73%）」</strong></div>
+        </div>
+      </div>
+
+      <div class="layer-item">
+        <div class="layer-accent" style="background:#7c3aed"></div>
+        <div class="layer-content">
+          <div class="layer-head">
+            <span class="layer-icon">🤝</span>
+            <span class="layer-title">Layer 3｜キャスティング評価</span>
+            <span class="layer-badge" style="background:#ede9fe;color:#5b21b6">2人以上で表示</span>
+          </div>
+          <div class="layer-body">複数タレントの組み合わせを評価。スコア差が小さい（20点未満）→ バランス型、大きい（20点以上）→ 対比型として判定。感情スコアが低いタレントにはリスク警告を表示。</div>
+          <div class="layer-ex">例：<strong>「話題性（A）と安定感（B）の対比が明確で、異なる視聴者層を同時に取り込める戦略的キャスティングです」</strong></div>
+        </div>
+      </div>
+
+      <div class="layer-item">
+        <div class="layer-accent" style="background:#ea580c"></div>
+        <div class="layer-content">
+          <div class="layer-head">
+            <span class="layer-icon">🏆</span>
+            <span class="layer-title">総合推奨度</span>
+            <span class="layer-badge" style="background:#ffedd5;color:#c2410c">常時表示</span>
+          </div>
+          <div class="layer-body">相性スコア・バズスコア・メディア適性・リスクを総合した★1〜5の5段階評価。5が「即決推奨」、1が「再考推奨」。</div>
+          <div class="layer-ex">
+            ★★★★★ → <strong>即決推奨</strong>：数字・話題性・安全性の三拍子が揃っている<br>
+            ★★★☆☆ → <strong>条件付き推奨</strong>：強みと改善点が明確。演出の工夫で評価が変わる
           </div>
         </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section 5: データ更新スケジュール -->
+  <div class="sec">
+    <div class="sec-title"><span class="sec-icon">🔄</span>データ更新スケジュール</div>
+    <div class="schedule-card">
+      <div class="schedule-icon">⏰</div>
+      <div class="schedule-body">
+        <p>毎週<strong>月曜日 AM 6:00</strong> に GitHub Actions が自動実行され、<strong>300名分のデータを一括収集・更新</strong>します。Google Trends・YouTube・ニュース・Wikipedia の各 API を順次呼び出し、SQLite データベースに保存後、<code>scores.json</code> を再生成してGitHub Pages に自動デプロイします。</p>
+        <p style="margin-top:10px;font-size:.83rem;color:var(--muted)">最新データの反映はダッシュボードのスコア更新日時でご確認ください。Google Trends APIのレート制限により、一部タレントのTrendsスコアが取得できない場合があります（その場合は前週の値を維持）。</p>
       </div>
     </div>
   </div>
@@ -305,25 +505,22 @@ footer{background:var(--card);border-top:1px solid var(--border);padding:20px 28
 
 <footer>
   <div class="footer-links">
-    <a href="./simulator.html" class="footer-link">🎬 シミュレーターへ</a>
-    <a href="./index.html" class="footer-link">📊 ダッシュボードへ</a>
+    <a href="./simulator.html" class="footer-btn">🎬 シミュレーターを開く</a>
+    <a href="./index.html" class="footer-btn">📊 ダッシュボードへ</a>
   </div>
-  <div class="footer-copy">CastScope © 2025 – Score Methodology v2.0</div>
+  <div class="footer-copy">CastScope © 2025 – Score Methodology v2.1</div>
 </footer>
 
 <script>
 // ── ヒートマップ 動的カラーリング ──────────────────────────
 (function() {
-  // 値範囲: 5%〜35%
-  // 低 → #dbeafe (primary-light)  rgb(219,234,254)
-  // 高 → #2563eb (primary)        rgb(37,99,235)
-  const LO = [219, 234, 254];
-  const HI = [37,  99,  235];
-  const MIN_V = 5, MAX_V = 35;
+  const LO = [219, 234, 254]; // #dbeafe (primary-light)
+  const HI  = [37,  99,  235]; // #2563eb (primary)
+  const MIN_V = 5, RANGE = 30;
 
-  document.querySelectorAll('#heat-table td[data-val]').forEach(td => {
-    const v = parseInt(td.dataset.val, 10);
-    const t = Math.max(0, Math.min(1, (v - MIN_V) / (MAX_V - MIN_V)));
+  document.querySelectorAll('#heat-table td[data-v]').forEach(td => {
+    const v = parseInt(td.dataset.v, 10);
+    const t = Math.max(0, Math.min(1, (v - MIN_V) / RANGE));
     const r = Math.round(LO[0] + (HI[0] - LO[0]) * t);
     const g = Math.round(LO[1] + (HI[1] - LO[1]) * t);
     const b = Math.round(LO[2] + (HI[2] - LO[2]) * t);
