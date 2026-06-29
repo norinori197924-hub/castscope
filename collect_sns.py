@@ -442,6 +442,8 @@ def fetch_youtube(talent_name):
     タレント名で動画検索 → 直近10件の再生数を集計
     返り値: {"video_count": N, "total_views": N, "avg_views": N}
     """
+    print(f"[DEBUG] YOUTUBE_API_KEY length: {len(YOUTUBE_API_KEY)}")
+    print(f"[DEBUG] YOUTUBE_API_KEY prefix: {YOUTUBE_API_KEY[:8] if YOUTUBE_API_KEY else 'EMPTY'}")
     if not YOUTUBE_API_KEY:
         print(f"  [YouTube] APIキー未設定 → スキップ")
         return {"video_count": None, "total_views": None, "avg_views": None}
