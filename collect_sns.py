@@ -427,7 +427,7 @@ def fetch_google_trends(talent_name):
     print(f"[TRENDS START] {talent_name}")
     for attempt in range(3):
         try:
-            time.sleep(10)
+            time.sleep(5)
             from pytrends.request import TrendReq
             pt = TrendReq(hl="ja-JP", tz=540, timeout=(10, 25))
             pt.build_payload([talent_name], timeframe="now 7-d", geo="JP")
@@ -442,7 +442,7 @@ def fetch_google_trends(talent_name):
         except Exception as e:
             print(f"[TRENDS ERROR] {talent_name} (attempt {attempt + 1}/3): {type(e).__name__}: {e}")
             if attempt < 2:
-                time.sleep(30)
+                time.sleep(20)
     return {"score": None, "peak": None}
 
 # ============================================================
@@ -740,6 +740,9 @@ def collect_all():
             print(f"  Wikipedia: {wiki}")
             print(f"  ★ SNSスコア: {score}")
             success_count += 1
+
+        save_cache(cache)
+        print(f"[CACHE] channel_cache.json を保存しました（{len(cache)}件）")
 
         if batch_idx + BATCH_SIZE < len(TALENTS):
             print(f"\n  [バッチ {batch_num} 完了 → 30秒待機]")
