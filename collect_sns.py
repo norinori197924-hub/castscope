@@ -18,7 +18,7 @@ import sys
 # 設定 — ここだけ編集する
 # ============================================================
 
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "YOUR_YOUTUBE_API_KEY")
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 NEWS_API_KEY    = os.environ.get("NEWS_API_KEY",    "YOUR_NEWS_API_KEY")
 
 DB_PATH = "castscope.db"
@@ -411,22 +411,27 @@ def fetch_google_trends(talent_name):
     """
     Google Trends から過去7日の検索関心度を取得
     返り値: {"score": 平均値, "peak": 最大値}
+    レート制限対策: 先頭60秒待機 + 最大3回リトライ（間隔60秒）
     """
-    try:
-        from pytrends.request import TrendReq
-        pt = TrendReq(hl="ja-JP", tz=540, timeout=(10, 25))
-        pt.build_payload([talent_name], timeframe="now 7-d", geo="JP")
-        df = pt.interest_over_time()
-        if df.empty or talent_name not in df.columns:
-            return {"score": None, "peak": None}
-        series = df[talent_name]
-        return {
-            "score": int(series.mean()),
-            "peak":  int(series.max()),
-        }
-    except Exception as e:
-        print(f"  [Trends ERROR] {talent_name}: {e}")
-        return {"score": None, "peak": None}
+    time.sleep(60)
+    for attempt in range(3):
+        try:
+            from pytrends.request import TrendReq
+            pt = TrendReq(hl="ja-JP", tz=540, timeout=(10, 25))
+            pt.build_payload([talent_name], timeframe="now 7-d", geo="JP")
+            df = pt.interest_over_time()
+            if df.empty or talent_name not in df.columns:
+                return {"score": None, "peak": None}
+            series = df[talent_name]
+            return {
+                "score": int(series.mean()),
+                "peak":  int(series.max()),
+            }
+        except Exception as e:
+            print(f"  [Trends ERROR] {talent_name} (attempt {attempt + 1}/3): {e}")
+            if attempt < 2:
+                time.sleep(60)
+    return {"score": None, "peak": None}
 
 # ============================================================
 # 2. YouTube Data API v3（無料）
@@ -437,7 +442,7 @@ def fetch_youtube(talent_name):
     タレント名で動画検索 → 直近10件の再生数を集計
     返り値: {"video_count": N, "total_views": N, "avg_views": N}
     """
-    if YOUTUBE_API_KEY == "YOUR_YOUTUBE_API_KEY":
+    if not YOUTUBE_API_KEY:
         print(f"  [YouTube] APIキー未設定 → スキップ")
         return {"video_count": None, "total_views": None, "avg_views": None}
     try:
@@ -521,7 +526,7 @@ def fetch_yt_subscribers(talent_name):
     チャンネル検索でタレントの公式チャンネル登録者数を取得
     返り値: {"subscribers": N, "sub_score": 0-100}
     """
-    if YOUTUBE_API_KEY == "YOUR_YOUTUBE_API_KEY":
+    if not YOUTUBE_API_KEY:
         return {"subscribers": None, "sub_score": None}
     import math
     best = 0
@@ -653,47 +658,60 @@ def collect_all():
     c = conn.cursor()
     success_count = 0
 
-    for talent in TALENTS:
-        name = talent["name"]
-        tid  = talent["id"]
-        print(f"\n[{tid}] {name} を収集中...")
+    BATCH_SIZE = 50
+    total_batches = (len(TALENTS) + BATCH_SIZE - 1) // BATCH_SIZE
 
-        trends  = fetch_google_trends(name)
-        youtube = fetch_youtube(name)
-        yt_sub  = fetch_yt_subscribers(name)
-        news    = fetch_news(name)
-        wiki    = fetch_wikipedia(name)
-        score   = calc_score(trends, youtube, news, wiki, yt_sub=yt_sub)
+    for batch_idx in range(0, len(TALENTS), BATCH_SIZE):
+        batch = TALENTS[batch_idx:batch_idx + BATCH_SIZE]
+        batch_num = batch_idx // BATCH_SIZE + 1
+        print(f"\n{'─'*50}")
+        print(f"バッチ {batch_num}/{total_batches}（{batch[0]['name']} ～ {batch[-1]['name']}）")
+        print(f"{'─'*50}")
 
-        c.execute("""
-            INSERT INTO sns_scores (
-                talent_id, collected_at,
-                trend_score, trend_peak,
-                yt_video_count, yt_total_views, yt_avg_views,
-                yt_subscribers, yt_sub_score,
-                news_count, news_sentiment,
-                wiki_pageviews,
-                sns_score_total
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (
-            tid, today,
-            trends["score"],  trends["peak"],
-            youtube["video_count"], youtube["total_views"], youtube["avg_views"],
-            yt_sub["subscribers"], yt_sub["sub_score"],
-            news["count"], news["sentiment"],
-            wiki["pageviews"],
-            score,
-        ))
-        conn.commit()
+        for talent in batch:
+            name = talent["name"]
+            tid  = talent["id"]
+            print(f"\n[{tid}] {name} を収集中...")
 
-        print(f"  Trends: {trends}")
-        print(f"  YouTube: {youtube}")
-        print(f"  YT Subscribers: {yt_sub}")
-        print(f"  News: {news}")
-        print(f"  Wikipedia: {wiki}")
-        print(f"  ★ SNSスコア: {score}")
-        success_count += 1
-        time.sleep(3)  # API負荷軽減（Trends rate limit対策）
+            trends  = fetch_google_trends(name)
+            youtube = fetch_youtube(name)
+            yt_sub  = fetch_yt_subscribers(name)
+            news    = fetch_news(name)
+            wiki    = fetch_wikipedia(name)
+            score   = calc_score(trends, youtube, news, wiki, yt_sub=yt_sub)
+
+            c.execute("""
+                INSERT INTO sns_scores (
+                    talent_id, collected_at,
+                    trend_score, trend_peak,
+                    yt_video_count, yt_total_views, yt_avg_views,
+                    yt_subscribers, yt_sub_score,
+                    news_count, news_sentiment,
+                    wiki_pageviews,
+                    sns_score_total
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+                tid, today,
+                trends["score"],  trends["peak"],
+                youtube["video_count"], youtube["total_views"], youtube["avg_views"],
+                yt_sub["subscribers"], yt_sub["sub_score"],
+                news["count"], news["sentiment"],
+                wiki["pageviews"],
+                score,
+            ))
+            conn.commit()
+
+            print(f"  Trends: {trends}")
+            print(f"  YouTube: {youtube}")
+            print(f"  YT Subscribers: {yt_sub}")
+            print(f"  News: {news}")
+            print(f"  Wikipedia: {wiki}")
+            print(f"  ★ SNSスコア: {score}")
+            success_count += 1
+
+        if batch_idx + BATCH_SIZE < len(TALENTS):
+            print(f"\n  [バッチ {batch_num} 完了 → 30秒待機]")
+            time.sleep(30)
 
     # 実行ログ
     c.execute("""
