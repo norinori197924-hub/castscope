@@ -21,7 +21,18 @@ import sys
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 NEWS_API_KEY    = os.environ.get("NEWS_API_KEY",    "YOUR_NEWS_API_KEY")
 
-DB_PATH = "castscope.db"
+DB_PATH    = "castscope.db"
+CACHE_FILE = "channel_cache.json"
+
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_cache(cache):
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
 
 # タレントリスト（本番は300名）
 TALENTS = [
@@ -438,48 +449,105 @@ def fetch_google_trends(talent_name):
 # 2. YouTube Data API v3（無料）
 # ============================================================
 
-def fetch_youtube(talent_name):
+def fetch_youtube_data(talent_name, cache):
     """
-    タレント名で動画検索 → 直近10件の再生数を集計
-    返り値: {"video_count": N, "total_views": N, "avg_views": N}
+    チャンネルID（キャッシュ優先）→ 登録者数 → 最新動画再生数 を一括取得
+    キャッシュあり: channels.list(1) + playlistItems.list(1) + videos.list(1) = 3 units
+    キャッシュなし: search.list(100) + 上記 = 103 units
+    返り値: {video_count, total_views, avg_views, subscribers, sub_score}
     """
-    print(f"[YOUTUBE START] {talent_name}")
+    null_result = {
+        "video_count": None, "total_views": None, "avg_views": None,
+        "subscribers": None, "sub_score": None,
+    }
     if not YOUTUBE_API_KEY:
         print(f"  [YouTube] APIキー未設定 → スキップ")
-        return {"video_count": None, "total_views": None, "avg_views": None}
-    try:
-        # ① 動画検索
-        q = urllib.parse.quote(talent_name)
-        search_url = (
-            f"https://www.googleapis.com/youtube/v3/search"
-            f"?part=id&q={q}&type=video&regionCode=JP"
-            f"&publishedAfter={(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%SZ')}"
-            f"&maxResults=10&key={YOUTUBE_API_KEY}"
-        )
-        with urllib.request.urlopen(search_url, timeout=10) as r:
-            items = json.loads(r.read())["items"]
-        if not items:
-            return {"video_count": 0, "total_views": 0, "avg_views": 0}
+        return null_result
 
-        # ② 動画IDで統計取得
-        ids = ",".join(i["id"]["videoId"] for i in items)
+    print(f"[YOUTUBE START] {talent_name}")
+    import math
+
+    # ① チャンネルID取得（キャッシュ優先: search.list 100units をスキップ）
+    channel_id = cache.get(talent_name)
+    if not channel_id:
+        try:
+            q = urllib.parse.quote(talent_name)
+            url = (
+                f"https://www.googleapis.com/youtube/v3/search"
+                f"?part=id&q={q}&type=channel&regionCode=JP&maxResults=3&key={YOUTUBE_API_KEY}"
+            )
+            with urllib.request.urlopen(url, timeout=10) as r:
+                items = json.loads(r.read())["items"]
+            if items:
+                channel_id = items[0]["id"]["channelId"]
+                cache[talent_name] = channel_id
+                save_cache(cache)
+        except Exception as e:
+            print(f"[YOUTUBE ERROR] {talent_name} channel search: {type(e).__name__}: {e}")
+
+    if not channel_id:
+        return null_result
+
+    # ② チャンネル統計（登録者数 + uploadsプレイリストID）: channels.list 1unit
+    subscribers = None
+    sub_score = None
+    uploads_playlist = None
+    try:
         stats_url = (
-            f"https://www.googleapis.com/youtube/v3/videos"
-            f"?part=statistics&id={ids}&key={YOUTUBE_API_KEY}"
+            f"https://www.googleapis.com/youtube/v3/channels"
+            f"?part=statistics,contentDetails&id={channel_id}&key={YOUTUBE_API_KEY}"
         )
         with urllib.request.urlopen(stats_url, timeout=10) as r:
-            videos = json.loads(r.read())["items"]
-
-        total = sum(int(v["statistics"].get("viewCount", 0)) for v in videos)
-        count = len(videos)
-        return {
-            "video_count": count,
-            "total_views": total,
-            "avg_views":   total // count if count else 0,
-        }
+            ch_items = json.loads(r.read())["items"]
+        if ch_items:
+            subs = int(ch_items[0]["statistics"].get("subscriberCount", 0))
+            if subs > 0:
+                subscribers = subs
+                sub_score = round(min(math.log10(subs + 1) / 7 * 100, 100), 1)
+            uploads_playlist = (
+                ch_items[0].get("contentDetails", {})
+                           .get("relatedPlaylists", {})
+                           .get("uploads")
+            )
     except Exception as e:
-        print(f"[YOUTUBE ERROR] {talent_name}: {type(e).__name__}: {e}")
-        return {"video_count": None, "total_views": None, "avg_views": None}
+        print(f"[YOUTUBE ERROR] {talent_name} channels.list: {type(e).__name__}: {e}")
+
+    # ③ 最新10動画の再生数: playlistItems.list(1) + videos.list(1) = 2units
+    video_count = None
+    total_views = None
+    avg_views = None
+    if uploads_playlist:
+        try:
+            pl_url = (
+                f"https://www.googleapis.com/youtube/v3/playlistItems"
+                f"?part=contentDetails&playlistId={uploads_playlist}"
+                f"&maxResults=10&key={YOUTUBE_API_KEY}"
+            )
+            with urllib.request.urlopen(pl_url, timeout=10) as r:
+                pl_items = json.loads(r.read())["items"]
+            if pl_items:
+                video_ids = ",".join(i["contentDetails"]["videoId"] for i in pl_items)
+                v_url = (
+                    f"https://www.googleapis.com/youtube/v3/videos"
+                    f"?part=statistics&id={video_ids}&key={YOUTUBE_API_KEY}"
+                )
+                with urllib.request.urlopen(v_url, timeout=10) as r:
+                    videos = json.loads(r.read())["items"]
+                total = sum(int(v["statistics"].get("viewCount", 0)) for v in videos)
+                count = len(videos)
+                video_count = count
+                total_views = total
+                avg_views = total // count if count else 0
+        except Exception as e:
+            print(f"[YOUTUBE ERROR] {talent_name} videos: {type(e).__name__}: {e}")
+
+    return {
+        "video_count": video_count,
+        "total_views": total_views,
+        "avg_views":   avg_views,
+        "subscribers": subscribers,
+        "sub_score":   sub_score,
+    }
 
 # ============================================================
 # 3. NewsAPI（無料 開発者プラン: 月100件）
@@ -518,48 +586,6 @@ def fetch_news(talent_name):
     except Exception as e:
         print(f"  [News ERROR] {talent_name}: {e}")
         return {"count": None, "sentiment": None}
-
-# ============================================================
-# 3b. YouTube チャンネル登録者数
-# ============================================================
-
-def fetch_yt_subscribers(talent_name):
-    """
-    チャンネル検索でタレントの公式チャンネル登録者数を取得
-    返り値: {"subscribers": N, "sub_score": 0-100}
-    """
-    if not YOUTUBE_API_KEY:
-        return {"subscribers": None, "sub_score": None}
-    import math
-    best = 0
-    for q_suffix in [" official", " 公式"]:
-        try:
-            q = urllib.parse.quote(talent_name + q_suffix)
-            url = (
-                f"https://www.googleapis.com/youtube/v3/search"
-                f"?part=id&q={q}&type=channel&regionCode=JP&maxResults=3&key={YOUTUBE_API_KEY}"
-            )
-            with urllib.request.urlopen(url, timeout=10) as r:
-                items = json.loads(r.read())["items"]
-            if not items:
-                continue
-            cids = ",".join(i["id"]["channelId"] for i in items)
-            stats_url = (
-                f"https://www.googleapis.com/youtube/v3/channels"
-                f"?part=statistics&id={cids}&key={YOUTUBE_API_KEY}"
-            )
-            with urllib.request.urlopen(stats_url, timeout=10) as r:
-                channels = json.loads(r.read())["items"]
-            for ch in channels:
-                subs = int(ch["statistics"].get("subscriberCount", 0))
-                if subs > best:
-                    best = subs
-        except Exception as e:
-            print(f"[SUBS ERROR] {talent_name}: {type(e).__name__}: {e}")
-    if best == 0:
-        return {"subscribers": None, "sub_score": None}
-    sub_score = round(min(math.log10(best + 1) / 7 * 100, 100), 1)
-    return {"subscribers": best, "sub_score": sub_score}
 
 # ============================================================
 # 4. Wikipedia Pageviews API（完全無料・認証不要）
@@ -659,6 +685,8 @@ def collect_all():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     success_count = 0
+    cache = load_cache()
+    print(f"[CACHE] チャンネルキャッシュ読み込み: {len(cache)}件")
 
     BATCH_SIZE = 50
     total_batches = (len(TALENTS) + BATCH_SIZE - 1) // BATCH_SIZE
@@ -677,8 +705,9 @@ def collect_all():
             print(f"[START] {name} の収集開始")
 
             trends  = fetch_google_trends(name)
-            youtube = fetch_youtube(name)
-            yt_sub  = fetch_yt_subscribers(name)
+            yt      = fetch_youtube_data(name, cache)
+            youtube = {"video_count": yt["video_count"], "total_views": yt["total_views"], "avg_views": yt["avg_views"]}
+            yt_sub  = {"subscribers": yt["subscribers"], "sub_score": yt["sub_score"]}
             news    = fetch_news(name)
             wiki    = fetch_wikipedia(name)
             score   = calc_score(trends, youtube, news, wiki, yt_sub=yt_sub)
