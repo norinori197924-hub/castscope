@@ -413,9 +413,9 @@ def fetch_google_trends(talent_name):
     返り値: {"score": 平均値, "peak": 最大値}
     レート制限対策: 先頭60秒待機 + 最大3回リトライ（間隔60秒）
     """
-    time.sleep(60)
     for attempt in range(3):
         try:
+            time.sleep(10)
             from pytrends.request import TrendReq
             pt = TrendReq(hl="ja-JP", tz=540, timeout=(10, 25))
             pt.build_payload([talent_name], timeframe="now 7-d", geo="JP")
@@ -430,7 +430,7 @@ def fetch_google_trends(talent_name):
         except Exception as e:
             print(f"  [Trends ERROR] {talent_name} (attempt {attempt + 1}/3): {e}")
             if attempt < 2:
-                time.sleep(60)
+                time.sleep(30)
     return {"score": None, "peak": None}
 
 # ============================================================
@@ -442,8 +442,6 @@ def fetch_youtube(talent_name):
     タレント名で動画検索 → 直近10件の再生数を集計
     返り値: {"video_count": N, "total_views": N, "avg_views": N}
     """
-    print(f"[DEBUG] YOUTUBE_API_KEY length: {len(YOUTUBE_API_KEY)}")
-    print(f"[DEBUG] YOUTUBE_API_KEY prefix: {YOUTUBE_API_KEY[:8] if YOUTUBE_API_KEY else 'EMPTY'}")
     if not YOUTUBE_API_KEY:
         print(f"  [YouTube] APIキー未設定 → スキップ")
         return {"video_count": None, "total_views": None, "avg_views": None}
