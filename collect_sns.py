@@ -411,8 +411,9 @@ def fetch_google_trends(talent_name):
     """
     Google Trends から過去7日の検索関心度を取得
     返り値: {"score": 平均値, "peak": 最大値}
-    レート制限対策: 先頭60秒待機 + 最大3回リトライ（間隔60秒）
+    レート制限対策: リクエスト直前10秒待機 + 最大3回リトライ（間隔30秒）
     """
+    print(f"[TRENDS START] {talent_name}")
     for attempt in range(3):
         try:
             time.sleep(10)
@@ -428,7 +429,7 @@ def fetch_google_trends(talent_name):
                 "peak":  int(series.max()),
             }
         except Exception as e:
-            print(f"  [Trends ERROR] {talent_name} (attempt {attempt + 1}/3): {e}")
+            print(f"[TRENDS ERROR] {talent_name} (attempt {attempt + 1}/3): {type(e).__name__}: {e}")
             if attempt < 2:
                 time.sleep(30)
     return {"score": None, "peak": None}
@@ -442,6 +443,7 @@ def fetch_youtube(talent_name):
     タレント名で動画検索 → 直近10件の再生数を集計
     返り値: {"video_count": N, "total_views": N, "avg_views": N}
     """
+    print(f"[YOUTUBE START] {talent_name}")
     if not YOUTUBE_API_KEY:
         print(f"  [YouTube] APIキー未設定 → スキップ")
         return {"video_count": None, "total_views": None, "avg_views": None}
@@ -451,7 +453,7 @@ def fetch_youtube(talent_name):
         search_url = (
             f"https://www.googleapis.com/youtube/v3/search"
             f"?part=id&q={q}&type=video&regionCode=JP"
-            f"&publishedAfter={(datetime.datetime.utcnow()-datetime.timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            f"&publishedAfter={(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%SZ')}"
             f"&maxResults=10&key={YOUTUBE_API_KEY}"
         )
         with urllib.request.urlopen(search_url, timeout=10) as r:
@@ -476,7 +478,7 @@ def fetch_youtube(talent_name):
             "avg_views":   total // count if count else 0,
         }
     except Exception as e:
-        print(f"  [YouTube ERROR] {talent_name}: {e}")
+        print(f"[YOUTUBE ERROR] {talent_name}: {type(e).__name__}: {e}")
         return {"video_count": None, "total_views": None, "avg_views": None}
 
 # ============================================================
@@ -553,7 +555,7 @@ def fetch_yt_subscribers(talent_name):
                 if subs > best:
                     best = subs
         except Exception as e:
-            print(f"  [YT-Sub ERROR] {talent_name}: {e}")
+            print(f"[SUBS ERROR] {talent_name}: {type(e).__name__}: {e}")
     if best == 0:
         return {"subscribers": None, "sub_score": None}
     sub_score = round(min(math.log10(best + 1) / 7 * 100, 100), 1)
@@ -672,6 +674,7 @@ def collect_all():
             name = talent["name"]
             tid  = talent["id"]
             print(f"\n[{tid}] {name} を収集中...")
+            print(f"[START] {name} の収集開始")
 
             trends  = fetch_google_trends(name)
             youtube = fetch_youtube(name)
