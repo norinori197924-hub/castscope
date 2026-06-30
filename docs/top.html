@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CastScope – キャスティングの勘を、データに変える。</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Noto+Sans+JP:wght@400;500;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   デザイントークン
+================================================================ */
+:root {
+  --navy-900: #0F2540;
+  --blue-600:  #1E5FA8;
+  --blue-50:   #EAF2FB;
+  --slate-500: #5B6B7C;
+  --white:     #FFFFFF;
+  --amber-500: #E0A100;
+
+  --font-head: 'Zen Kaku Gothic New', sans-serif;
+  --font-body: 'Noto Sans JP', sans-serif;
+  --font-mono: 'Roboto Mono', monospace;
+
+  --radius-card: 14px;
+  --shadow-card: 0 4px 20px rgba(15,37,64,.10);
+  --shadow-hover: 0 8px 32px rgba(15,37,64,.18);
+
+  --section-gap: 96px;
+}
+
+/* ================================================================
+   リセット & ベース
+================================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--navy-900);
+  background: var(--white);
+  line-height: 1.8;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+img { display: block; max-width: 100%; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ================================================================
+   ユーティリティ
+================================================================ */
+.wrap {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.mono { font-family: var(--font-mono); }
+
+/* ================================================================
+   スクロールフェードイン
+================================================================ */
+.fade-in {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .65s ease, transform .65s ease;
+}
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fade-in.delay-1 { transition-delay: .1s; }
+.fade-in.delay-2 { transition-delay: .2s; }
+.fade-in.delay-3 { transition-delay: .3s; }
+
+/* ================================================================
+   ① ヘッダー（固定）
+================================================================ */
+#site-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(15,37,64,.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 0 28px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.logo-text {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: 1.35rem;
+  color: var(--white);
+  letter-spacing: .06em;
+}
+.logo-text span {
+  color: var(--amber-500);
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-login {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 22px;
+  border-radius: 6px;
+  background: var(--blue-600);
+  color: var(--white);
+  font-size: .85rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background .18s, transform .18s;
+}
+.btn-login:hover {
+  background: #2470c0;
+  transform: translateY(-1px);
+}
+
+/* ================================================================
+   ② ヒーローセクション
+================================================================ */
+#hero {
+  background: linear-gradient(150deg, var(--navy-900) 0%, #132d52 55%, #1a3f6e 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 100px 0 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景の装飾円 */
+#hero::before {
+  content: '';
+  position: absolute;
+  top: -200px; right: -200px;
+  width: 700px; height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(30,95,168,.30) 0%, transparent 70%);
+  pointer-events: none;
+}
+#hero::after {
+  content: '';
+  position: absolute;
+  bottom: -150px; left: -150px;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(224,161,0,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-copy { max-width: 520px; }
+
+.hero-eyebrow {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--amber-500);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  padding: 4px 12px;
+  border: 1px solid rgba(224,161,0,.35);
+  border-radius: 4px;
+}
+
+.hero-catch {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: clamp(1.9rem, 3.8vw, 2.8rem);
+  color: var(--white);
+  line-height: 1.35;
+  letter-spacing: .02em;
+  margin-bottom: 24px;
+}
+.hero-catch em {
+  font-style: normal;
+  color: var(--amber-500);
+}
+
+.hero-sub {
+  font-size: .97rem;
+  color: rgba(255,255,255,.72);
+  line-height: 1.9;
+  margin-bottom: 40px;
+}
+
+.hero-btns {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: var(--amber-500);
+  color: var(--navy-900);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: .95rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background .18s, transform .18s, box-shadow .18s;
+  box-shadow: 0 4px 16px rgba(224,161,0,.35);
+}
+.btn-primary:hover {
+  background: #f0b000;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(224,161,0,.45);
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: .95rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,.35);
+  cursor: pointer;
+  transition: border-color .18s, background .18s, transform .18s;
+}
+.btn-outline:hover {
+  border-color: rgba(255,255,255,.8);
+  background: rgba(255,255,255,.08);
+  transform: translateY(-2px);
+}
+
+/* ── スコアカードモック ── */
+.hero-visual {
+  position: relative;
+  height: 380px;
+}
+
+.mock-card {
+  position: absolute;
+  background: var(--white);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  width: 240px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.35);
+}
+
+.mock-card:nth-child(1) {
+  top: 0; left: 10px;
+  transform: rotate(-6deg) translateY(0);
+  z-index: 1;
+  opacity: .6;
+}
+.mock-card:nth-child(2) {
+  top: 30px; left: 60px;
+  transform: rotate(-2deg);
+  z-index: 2;
+  opacity: .85;
+}
+.mock-card:nth-child(3) {
+  top: 60px; left: 110px;
+  transform: rotate(3deg);
+  z-index: 3;
+}
+
+.mock-card-name {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: .9rem;
+  color: var(--navy-900);
+  margin-bottom: 4px;
+}
+.mock-card-genre {
+  font-size: .7rem;
+  color: var(--slate-500);
+  margin-bottom: 12px;
+}
+
+.mock-score-total {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.mock-score-num {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--blue-600);
+}
+.mock-score-label {
+  font-size: .72rem;
+  color: var(--slate-500);
+}
+
+.mock-bars { display: flex; flex-direction: column; gap: 6px; }
+
+.mock-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mock-bar-label {
+  font-size: .65rem;
+  color: var(--slate-500);
+  width: 40px;
+  flex-shrink: 0;
+}
+.mock-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--blue-50);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.mock-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue-600), #4a9de0);
+  border-radius: 3px;
+}
+.mock-bar-val {
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  color: var(--blue-600);
+  font-weight: 700;
+  width: 24px;
+  text-align: right;
+}
+
+/* ================================================================
+   セクション共通
+================================================================ */
+.section {
+  padding: var(--section-gap) 0;
+}
+.section-alt {
+  background: var(--blue-50);
+}
+.section-dark {
+  background: var(--navy-900);
+  color: var(--white);
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--blue-600);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-dark .section-label {
+  color: var(--amber-500);
+}
+
+.section-title {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: clamp(1.4rem, 2.8vw, 2rem);
+  line-height: 1.4;
+  letter-spacing: .02em;
+  margin-bottom: 56px;
+}
+
+.section-title-center {
+  text-align: center;
+}
+
+/* ================================================================
+   ③ 課題提起セクション
+================================================================ */
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.problem-card {
+  background: var(--white);
+  border-radius: var(--radius-card);
+  padding: 32px 28px;
+  box-shadow: var(--shadow-card);
+  border-top: 4px solid var(--blue-600);
+  transition: box-shadow .2s, transform .2s;
+}
+.problem-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-4px);
+}
+
+.problem-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--blue-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+}
+
+.problem-card h3 {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--navy-900);
+}
+
+/* ================================================================
+   ④ 機能紹介セクション
+================================================================ */
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+}
+
+.feature-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+.feature-row.reverse {
+  direction: rtl;
+}
+.feature-row.reverse > * {
+  direction: ltr;
+}
+
+.feature-number {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--amber-500);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.feature-title {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: 1.3rem;
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+
+.feature-desc {
+  color: var(--slate-500);
+  line-height: 1.9;
+  margin-bottom: 20px;
+  font-size: .95rem;
+}
+
+.feature-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--blue-600);
+  border-bottom: 1px solid rgba(30,95,168,.3);
+  padding-bottom: 2px;
+  transition: border-color .15s, color .15s;
+}
+.feature-link:hover {
+  color: var(--navy-900);
+  border-color: var(--navy-900);
+}
+
+/* 機能ビジュアルボックス */
+.feature-visual {
+  background: var(--blue-50);
+  border-radius: var(--radius-card);
+  padding: 32px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+}
+
+/* 機能1：指標バッジ */
+.metric-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.metric-badge {
+  padding: 6px 14px;
+  background: var(--white);
+  border: 1px solid rgba(30,95,168,.2);
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--blue-600);
+  box-shadow: 0 2px 6px rgba(30,95,168,.08);
+}
+.score-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--white);
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 2px 8px rgba(15,37,64,.08);
+}
+.score-preview-num {
+  font-family: var(--font-mono);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--blue-600);
+}
+.score-preview-label {
+  font-size: .78rem;
+  color: var(--slate-500);
+}
+
+/* 機能2：メディア別バー */
+.media-bars { display: flex; flex-direction: column; gap: 8px; }
+.media-bar-row { display: flex; align-items: center; gap: 10px; }
+.media-bar-name {
+  font-size: .75rem;
+  color: var(--navy-900);
+  font-weight: 700;
+  width: 60px;
+  flex-shrink: 0;
+}
+.media-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--white);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.media-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+.fill-tv    { background: var(--blue-600); }
+.fill-cm    { background: var(--amber-500); }
+.fill-movie { background: #5b6b7c; }
+.fill-sns   { background: #2a9d8f; }
+.fill-radio { background: #e76f51; }
+.media-bar-val {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--navy-900);
+  width: 28px;
+  text-align: right;
+}
+
+/* 機能3：比較テーブル */
+.compare-table {
+  background: var(--white);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15,37,64,.08);
+  font-size: .78rem;
+}
+.compare-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.compare-table th {
+  background: var(--navy-900);
+  color: var(--white);
+  padding: 9px 12px;
+  font-weight: 700;
+  text-align: left;
+}
+.compare-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--blue-50);
+  color: var(--navy-900);
+}
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table td:not(:first-child) {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--blue-600);
+}
+
+/* ================================================================
+   ⑤ 料金プランセクション
+================================================================ */
+/* 価格は仮設定（後で編集） */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.plan-card {
+  background: var(--white);
+  border-radius: var(--radius-card);
+  padding: 36px 28px;
+  box-shadow: var(--shadow-card);
+  border: 2px solid transparent;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+  position: relative;
+}
+.plan-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-4px);
+}
+.plan-card.featured {
+  border-color: var(--blue-600);
+}
+
+.plan-badge {
+  position: absolute;
+  top: -12px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--blue-600);
+  color: var(--white);
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 12px;
+  letter-spacing: .06em;
+}
+
+.plan-name {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--slate-500);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.plan-price {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.7rem;
+  color: var(--navy-900);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.plan-price-note {
+  font-size: .75rem;
+  color: var(--slate-500);
+  margin-bottom: 24px;
+}
+
+.plan-divider {
+  border: none;
+  border-top: 1px solid var(--blue-50);
+  margin-bottom: 20px;
+}
+
+.plan-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.plan-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: .88rem;
+  color: var(--navy-900);
+  line-height: 1.6;
+}
+.plan-features li::before {
+  content: '✓';
+  color: var(--blue-600);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.plan-cta {
+  display: block;
+  text-align: center;
+  margin-top: 28px;
+  padding: 11px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: .88rem;
+  background: var(--blue-50);
+  color: var(--blue-600);
+  border: 1px solid rgba(30,95,168,.2);
+  transition: background .18s, color .18s;
+}
+.plan-cta:hover {
+  background: var(--blue-600);
+  color: var(--white);
+}
+.plan-card.featured .plan-cta {
+  background: var(--blue-600);
+  color: var(--white);
+  border-color: var(--blue-600);
+}
+.plan-card.featured .plan-cta:hover {
+  background: #2470c0;
+}
+
+/* ================================================================
+   ⑥ 実績・信頼性セクション
+================================================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.stat-card {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--radius-card);
+  padding: 40px 32px;
+  text-align: center;
+  transition: background .2s, transform .2s;
+}
+.stat-card:hover {
+  background: rgba(255,255,255,.10);
+  transform: translateY(-4px);
+}
+
+.stat-num {
+  font-family: var(--font-mono);
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 700;
+  color: var(--amber-500);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+
+.stat-sub {
+  font-size: .82rem;
+  color: rgba(255,255,255,.5);
+}
+
+/* ================================================================
+   ⑦ CTAセクション
+================================================================ */
+#cta {
+  padding: var(--section-gap) 0;
+  background: var(--blue-50);
+  text-align: center;
+}
+
+#cta .section-title {
+  margin-bottom: 20px;
+}
+
+#cta .cta-sub {
+  color: var(--slate-500);
+  margin-bottom: 40px;
+  font-size: .97rem;
+}
+
+.cta-btns {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 36px;
+  background: var(--navy-900);
+  color: var(--white);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: .97rem;
+  border-radius: 8px;
+  transition: background .18s, transform .18s, box-shadow .18s;
+  box-shadow: 0 4px 16px rgba(15,37,64,.2);
+}
+.btn-contact:hover {
+  background: #1a3a6a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15,37,64,.28);
+}
+
+/* ================================================================
+   ⑧ フッター
+================================================================ */
+footer {
+  background: var(--navy-900);
+  padding: 40px 0;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-logo {
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: var(--white);
+  letter-spacing: .06em;
+}
+.footer-logo span { color: var(--amber-500); }
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+.footer-links a {
+  color: rgba(255,255,255,.5);
+  font-size: .82rem;
+  transition: color .15s;
+}
+.footer-links a:hover { color: var(--white); }
+
+.footer-copy {
+  color: rgba(255,255,255,.35);
+  font-size: .75rem;
+  width: 100%;
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+/* ================================================================
+   レスポンシブ
+================================================================ */
+@media (max-width: 900px) {
+  :root { --section-gap: 64px; }
+
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .hero-visual { height: 300px; }
+  .mock-card { width: 210px; }
+
+  .problem-grid,
+  .plan-grid,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-row,
+  .feature-row.reverse {
+    grid-template-columns: 1fr;
+    direction: ltr;
+    gap: 32px;
+  }
+  .feature-row.reverse > * { direction: ltr; }
+}
+
+@media (max-width: 600px) {
+  .header-inner { padding: 0 16px; }
+  .wrap { padding: 0 16px; }
+
+  .hero-catch { font-size: 1.7rem; }
+
+  .hero-btns { flex-direction: column; }
+  .btn-primary, .btn-outline { width: 100%; justify-content: center; }
+
+  .hero-visual { height: 260px; }
+  .mock-card { width: 180px; padding: 14px 16px; }
+  .mock-score-num { font-size: 1.6rem; }
+
+  .cta-btns { flex-direction: column; align-items: center; }
+  .btn-contact, .btn-login { width: 100%; justify-content: center; }
+
+  .footer-links { gap: 16px; }
+  .footer-inner { justify-content: center; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     ① ヘッダー（固定）
+================================================================ -->
+<header id="site-header">
+  <div class="header-inner">
+    <a href="top.html" class="logo-text">Cast<span>Scope</span></a>
+    <nav class="header-nav">
+      <a href="login.html" class="btn-login">ログイン</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ================================================================
+     ② ヒーローセクション
+================================================================ -->
+<section id="hero">
+  <div class="wrap">
+    <div class="hero-inner">
+      <!-- コピー -->
+      <div class="hero-copy fade-in">
+        <p class="hero-eyebrow">Talent Analytics Platform</p>
+        <h1 class="hero-catch">キャスティングの勘を、<em>データ</em>に変える。</h1>
+        <p class="hero-sub">
+          300人のタレントデータから、メディア別の最適なキャスティングを<br>
+          スコアで導き出す
+        </p>
+        <div class="hero-btns">
+          <a href="#contact" class="btn-primary">資料を見る ↗</a>
+          <a href="login.html" class="btn-outline">ログイン</a>
+        </div>
+      </div>
+
+      <!-- スコアカードモック（3枚重ね） -->
+      <div class="hero-visual fade-in delay-2" aria-hidden="true">
+
+        <!-- カード1（後ろ） -->
+        <div class="mock-card">
+          <div class="mock-card-name">長澤まさみ</div>
+          <div class="mock-card-genre">女優</div>
+          <div class="mock-score-total">
+            <span class="mock-score-num mono">72</span>
+            <span class="mock-score-label">/ 100 pts</span>
+          </div>
+          <div class="mock-bars">
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">Trends</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:68%"></div></div>
+              <span class="mock-bar-val mono">68</span>
+            </div>
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">YouTube</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:55%"></div></div>
+              <span class="mock-bar-val mono">55</span>
+            </div>
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">News</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:82%"></div></div>
+              <span class="mock-bar-val mono">82</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- カード2（中間） -->
+        <div class="mock-card">
+          <div class="mock-card-name">菅田将暉</div>
+          <div class="mock-card-genre">俳優・アーティスト</div>
+          <div class="mock-score-total">
+            <span class="mock-score-num mono">86</span>
+            <span class="mock-score-label">/ 100 pts</span>
+          </div>
+          <div class="mock-bars">
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">Trends</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:91%"></div></div>
+              <span class="mock-bar-val mono">91</span>
+            </div>
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">YouTube</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:78%"></div></div>
+              <span class="mock-bar-val mono">78</span>
+            </div>
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">News</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:85%"></div></div>
+              <span class="mock-bar-val mono">85</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- カード3（前面） -->
+        <div class="mock-card">
+          <div class="mock-card-name">綾瀬はるか</div>
+          <div class="mock-card-genre">女優</div>
+          <div class="mock-score-total">
+            <span class="mock-score-num mono">91</span>
+            <span class="mock-score-label">/ 100 pts</span>
+          </div>
+          <div class="mock-bars">
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">Trends</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:88%"></div></div>
+              <span class="mock-bar-val mono">88</span>
+            </div>
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">YouTube</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:92%"></div></div>
+              <span class="mock-bar-val mono">92</span>
+            </div>
+            <div class="mock-bar-row">
+              <span class="mock-bar-label">News</span>
+              <div class="mock-bar-track"><div class="mock-bar-fill" style="width:76%"></div></div>
+              <span class="mock-bar-val mono">76</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /hero-visual -->
+    </div><!-- /hero-inner -->
+  </div>
+</section>
+
+<!-- ================================================================
+     ③ 課題提起セクション
+================================================================ -->
+<section class="section">
+  <div class="wrap">
+    <p class="section-label fade-in">Problem</p>
+    <h2 class="section-title fade-in">
+      キャスティングの意思決定、<br>こんな課題はありませんか？
+    </h2>
+    <div class="problem-grid">
+      <div class="problem-card fade-in delay-1">
+        <div class="problem-icon">🎯</div>
+        <h3>過去の実績や勘に頼った起用判断</h3>
+      </div>
+      <div class="problem-card fade-in delay-2">
+        <div class="problem-icon">📊</div>
+        <h3>メディアごとの適性が数値化されていない</h3>
+      </div>
+      <div class="problem-card fade-in delay-3">
+        <div class="problem-icon">⏱</div>
+        <h3>複数候補の比較に時間がかかる</h3>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     ④ 機能紹介セクション
+================================================================ -->
+<section class="section section-alt">
+  <div class="wrap">
+    <p class="section-label section-title-center fade-in">Features</p>
+    <h2 class="section-title section-title-center fade-in">CastScopeが解決する3つのこと</h2>
+
+    <div class="feature-list">
+
+      <!-- 機能1 -->
+      <div class="feature-row fade-in">
+        <div class="feature-body">
+          <p class="feature-number">Feature 01</p>
+          <h3 class="feature-title">データドリブン<br>スコアリング</h3>
+          <p class="feature-desc">
+            Google Trends・YouTube・ニュース等6指標から、タレントの社会的注目度を毎週自動算出。感覚ではなく数値で「今の旬」を把握できます。
+          </p>
+          <a href="about-score.html" class="feature-link">詳しい算出方法はこちら →</a>
+        </div>
+        <div class="feature-visual">
+          <div class="metric-badges">
+            <span class="metric-badge">Google Trends</span>
+            <span class="metric-badge">YouTube 再生数</span>
+            <span class="metric-badge">YT 登録者数</span>
+            <span class="metric-badge">ニュース件数</span>
+            <span class="metric-badge">感情スコア</span>
+            <span class="metric-badge">Wikipedia PV</span>
+          </div>
+          <div class="score-preview">
+            <span class="score-preview-num mono">91</span>
+            <div>
+              <div style="font-weight:700;font-size:.88rem;">綾瀬はるか</div>
+              <div class="score-preview-label">総合スコア / 100</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 機能2 -->
+      <div class="feature-row reverse fade-in">
+        <div class="feature-body">
+          <p class="feature-number">Feature 02</p>
+          <h3 class="feature-title">メディア別<br>シミュレーション</h3>
+          <p class="feature-desc">
+            テレビ・CM・映画・SNS等7メディアごとに重み付けされた適性スコアとAI考察を表示。「このタレントはCMより映画向き」という判断を即座に。
+          </p>
+          <a href="about-score.html" class="feature-link">詳しい算出方法はこちら →</a>
+        </div>
+        <div class="feature-visual">
+          <div class="media-bars">
+            <div class="media-bar-row">
+              <span class="media-bar-name">テレビ</span>
+              <div class="media-bar-track"><div class="media-bar-fill fill-tv" style="width:88%"></div></div>
+              <span class="media-bar-val mono">88</span>
+            </div>
+            <div class="media-bar-row">
+              <span class="media-bar-name">CM</span>
+              <div class="media-bar-track"><div class="media-bar-fill fill-cm" style="width:76%"></div></div>
+              <span class="media-bar-val mono">76</span>
+            </div>
+            <div class="media-bar-row">
+              <span class="media-bar-name">映画</span>
+              <div class="media-bar-track"><div class="media-bar-fill fill-movie" style="width:91%"></div></div>
+              <span class="media-bar-val mono">91</span>
+            </div>
+            <div class="media-bar-row">
+              <span class="media-bar-name">SNS</span>
+              <div class="media-bar-track"><div class="media-bar-fill fill-sns" style="width:62%"></div></div>
+              <span class="media-bar-val mono">62</span>
+            </div>
+            <div class="media-bar-row">
+              <span class="media-bar-name">ラジオ</span>
+              <div class="media-bar-track"><div class="media-bar-fill fill-radio" style="width:54%"></div></div>
+              <span class="media-bar-val mono">54</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 機能3 -->
+      <div class="feature-row fade-in">
+        <div class="feature-body">
+          <p class="feature-number">Feature 03</p>
+          <h3 class="feature-title">キャスティング<br>比較</h3>
+          <p class="feature-desc">
+            最大5人を同時に比較し、年代×性別の視聴意向マップで訴求力を可視化。稟議書や提案書に貼れる比較レポートを即出力。
+          </p>
+          <a href="about-score.html" class="feature-link">詳しい算出方法はこちら →</a>
+        </div>
+        <div class="feature-visual">
+          <div class="compare-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>タレント</th>
+                  <th>TV</th>
+                  <th>CM</th>
+                  <th>SNS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>綾瀬はるか</td>
+                  <td>88</td><td>76</td><td>62</td>
+                </tr>
+                <tr>
+                  <td>菅田将暉</td>
+                  <td>82</td><td>91</td><td>79</td>
+                </tr>
+                <tr>
+                  <td>広瀬すず</td>
+                  <td>75</td><td>83</td><td>88</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /feature-list -->
+  </div>
+</section>
+
+<!-- ================================================================
+     ⑤ 料金プランセクション
+     ※ 価格は仮設定。後で編集してください。
+================================================================ -->
+<section class="section">
+  <div class="wrap">
+    <p class="section-label section-title-center fade-in">Pricing</p>
+    <h2 class="section-title section-title-center fade-in">料金プラン</h2>
+
+    <div class="plan-grid">
+
+      <!-- スタンダード -->
+      <div class="plan-card fade-in delay-1">
+        <p class="plan-name">スタンダード</p>
+        <p class="plan-price mono">¥50,000<span style="font-size:1rem;font-weight:400;">〜</span></p>
+        <p class="plan-price-note">/ 月額（税抜）</p>
+        <hr class="plan-divider">
+        <ul class="plan-features">
+          <li>タレントスコア閲覧</li>
+          <li>シミュレーター利用（月10回まで）</li>
+        </ul>
+        <a href="#contact" class="plan-cta">お問い合わせ</a>
+      </div>
+
+      <!-- プロフェッショナル -->
+      <div class="plan-card featured fade-in delay-2">
+        <span class="plan-badge">人気プラン</span>
+        <p class="plan-name">プロフェッショナル</p>
+        <p class="plan-price mono">¥150,000<span style="font-size:1rem;font-weight:400;">〜</span></p>
+        <p class="plan-price-note">/ 月額（税抜）</p>
+        <hr class="plan-divider">
+        <ul class="plan-features">
+          <li>スコア閲覧無制限</li>
+          <li>シミュレーター利用無制限</li>
+          <li>AI考察機能フル活用</li>
+        </ul>
+        <a href="#contact" class="plan-cta">お問い合わせ</a>
+      </div>
+
+      <!-- エンタープライズ -->
+      <div class="plan-card fade-in delay-3">
+        <p class="plan-name">エンタープライズ</p>
+        <p class="plan-price" style="font-size:1.4rem;">要問合せ</p>
+        <p class="plan-price-note">個別お見積り</p>
+        <hr class="plan-divider">
+        <ul class="plan-features">
+          <li>専属タレント追加対応</li>
+          <li>カスタムレポート作成</li>
+          <li>専任サポート</li>
+        </ul>
+        <a href="#contact" class="plan-cta">お問い合わせ</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     ⑥ 実績・信頼性セクション
+================================================================ -->
+<section class="section section-dark">
+  <div class="wrap">
+    <p class="section-label section-title-center fade-in">Data</p>
+    <h2 class="section-title section-title-center fade-in" style="color:var(--white);">データの裏付け</h2>
+
+    <div class="stats-grid">
+      <div class="stat-card fade-in delay-1">
+        <p class="stat-num">300+</p>
+        <p class="stat-label">登録タレント数</p>
+        <p class="stat-sub">女優・俳優・アイドル・芸人・アーティスト</p>
+      </div>
+      <div class="stat-card fade-in delay-2">
+        <p class="stat-num">6</p>
+        <p class="stat-label">収集指標</p>
+        <p class="stat-sub">Trends / YouTube / News / Wiki ほか</p>
+      </div>
+      <div class="stat-card fade-in delay-3">
+        <p class="stat-num">毎週</p>
+        <p class="stat-label">自動データ更新</p>
+        <p class="stat-sub">GitHub Actions による定期収集・スコア算出</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     ⑦ CTAセクション
+================================================================ -->
+<section id="contact" class="section" style="background:var(--blue-50);text-align:center;">
+  <div class="wrap">
+    <p class="section-label fade-in" style="justify-content:center;display:flex;">Contact</p>
+    <h2 class="section-title section-title-center fade-in">
+      まずは資料請求・<br class="sp-only">デモのご相談を
+    </h2>
+    <p class="fade-in" style="color:var(--slate-500);margin-bottom:40px;font-size:.97rem;">
+      導入の流れや費用感のご質問など、お気軽にお問い合わせください。
+    </p>
+    <div class="cta-btns fade-in">
+      <a href="mailto:info@castscope.example" class="btn-contact">お問い合わせ ✉</a>
+      <a href="login.html" class="btn-login" style="padding:16px 36px;font-size:.97rem;">ログイン</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     ⑧ フッター
+================================================================ -->
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <span class="footer-logo">Cast<span>Scope</span></span>
+      <div class="footer-links">
+        <a href="login.html">ログイン</a>
+        <a href="index.html">スコア一覧</a>
+        <a href="about-score.html">算出ロジック</a>
+      </div>
+    </div>
+    <p class="footer-copy">&copy; 2025 CastScope. All rights reserved.</p>
+  </div>
+</footer>
+
+<!-- ================================================================
+     スクロールフェードイン JS
+================================================================ -->
+<script>
+(function () {
+  const targets = document.querySelectorAll('.fade-in');
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          io.unobserve(e.target);
+        }
+      });
+    },
+    { threshold: 0.12 }
+  );
+  targets.forEach((t) => io.observe(t));
+
+  /* ヘッダー背景を初期ヒーローエリアでは透過度を下げる */
+  const header = document.getElementById('site-header');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 60) {
+      header.style.background = 'rgba(15,37,64,.97)';
+    } else {
+      header.style.background = 'rgba(15,37,64,.96)';
+    }
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>
