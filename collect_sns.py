@@ -441,6 +441,10 @@ def fetch_google_trends(talent_name):
             }
         except Exception as e:
             print(f"[TRENDS ERROR] {talent_name} (attempt {attempt + 1}/3): {type(e).__name__}: {e}")
+            # 429エラーはリトライせず即スキップ
+            if "429" in str(e) or "TooManyRequests" in str(e):
+                print(f"[TRENDS SKIP] {talent_name}: レート制限のためスキップ")
+                break
             if attempt < 2:
                 time.sleep(20)
     return {"score": None, "peak": None}
