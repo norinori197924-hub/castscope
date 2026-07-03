@@ -422,12 +422,15 @@ def fetch_google_trends(talent_name):
     """
     Google Trends から過去7日の検索関心度を取得
     返り値: {"score": 平均値, "peak": 最大値}
-    レート制限対策: リクエスト直前10秒待機 + 最大3回リトライ（間隔30秒）
+    レート制限対策: リクエスト直前15秒待機 + 429時は45秒待って1回だけリトライ
+    # 300人 × 15秒 = 75分（Trends成功時）
+    # 429発生時 +45秒/人（最大）
+    # 合計：最大約150分（2時間30分）以内
     """
     print(f"[TRENDS START] {talent_name}")
     for attempt in range(3):
         try:
-            time.sleep(5)
+            time.sleep(15)
             from pytrends.request import TrendReq
             pt = TrendReq(hl="ja-JP", tz=540, timeout=(10, 25))
             pt.build_payload([talent_name], timeframe="now 7-d", geo="JP")
@@ -441,10 +444,14 @@ def fetch_google_trends(talent_name):
             }
         except Exception as e:
             print(f"[TRENDS ERROR] {talent_name} (attempt {attempt + 1}/3): {type(e).__name__}: {e}")
-            # 429エラーはリトライせず即スキップ
             if "429" in str(e) or "TooManyRequests" in str(e):
-                print(f"[TRENDS SKIP] {talent_name}: レート制限のためスキップ")
-                break
+                if attempt == 0:
+                    print(f"[TRENDS WAIT] {talent_name}: 45秒待機してリトライ")
+                    time.sleep(45)
+                    continue  # 1回だけリトライ
+                else:
+                    print(f"[TRENDS SKIP] {talent_name}: レート制限のためスキップ")
+                    break
             if attempt < 2:
                 time.sleep(20)
     return {"score": None, "peak": None}
