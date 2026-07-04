@@ -94,6 +94,7 @@ def export():
             "news_sentiment": row["news_sentiment"],
             "wiki_pageviews": row["wiki_pageviews"],
             "score":          row["sns_score_total"],
+            "trends_available": row["trend_score"] is not None and row["trend_score"] > 0,
         }
         talents.append({
             "rank":    rank,

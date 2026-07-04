@@ -626,14 +626,20 @@ def fetch_wikipedia(talent_name):
 def calc_score(trends, youtube, news, wiki, sentiment=None, yt_sub=None):
     """
     各指標を0-100に正規化して加重平均
-    weights: Trends 25% / YTavg 25% / News件数 15% / Wiki 10% / News感情 15% / YT登録者 10%
+    weights (Trendsあり): Trends 25% / YTavg 25% / News件数 15% / Wiki 10% / News感情 15% / YT登録者 10%
+    Trendsが空（None または 0）の場合は除外し、残り5指標で100%に正規化する
+    weights (Trendsなし): YTavg 33% / News件数 20% / Wiki 13% / News感情 20% / YT登録者 14%
     """
     import math
+
+    has_trends = trends["score"] is not None and trends["score"] > 0
+    w_yt, w_news, w_wiki, w_sent, w_sub = (25, 15, 10, 15, 10) if has_trends else (33, 20, 13, 20, 14)
+
     scores = []
     weights = []
 
     # Google Trends (0-100 が元々の単位)
-    if trends["score"] is not None:
+    if has_trends:
         scores.append(min(trends["score"], 100))
         weights.append(25)
 
@@ -641,17 +647,17 @@ def calc_score(trends, youtube, news, wiki, sentiment=None, yt_sub=None):
     if youtube["avg_views"] is not None and youtube["avg_views"] > 0:
         yt_score = min(100, math.log10(youtube["avg_views"] + 1) / 6 * 100)
         scores.append(yt_score)
-        weights.append(25)
+        weights.append(w_yt)
 
     # News件数 (300件以上で満点)
     if news["count"] is not None:
         scores.append(min(news["count"] / 3, 100))
-        weights.append(15)
+        weights.append(w_news)
 
     # Wikipedia (月10万PV以上で満点)
     if wiki["pageviews"] is not None:
         scores.append(min(wiki["pageviews"] / 1000, 100))
-        weights.append(10)
+        weights.append(w_wiki)
 
     # News感情スコア (0-100)
     sent = (sentiment or {}).get("sentiment") if isinstance(sentiment, dict) else sentiment
@@ -659,7 +665,7 @@ def calc_score(trends, youtube, news, wiki, sentiment=None, yt_sub=None):
         sent = news["sentiment"]
     if sent is not None:
         scores.append(sent)
-        weights.append(15)
+        weights.append(w_sent)
 
     # YouTube登録者スコア (0-100)
     sub_score = None
@@ -667,7 +673,7 @@ def calc_score(trends, youtube, news, wiki, sentiment=None, yt_sub=None):
         sub_score = yt_sub.get("sub_score")
     if sub_score is not None:
         scores.append(sub_score)
-        weights.append(10)
+        weights.append(w_sub)
 
     if not scores:
         return None
@@ -714,6 +720,7 @@ def collect_all():
             news    = fetch_news(name)
             wiki    = fetch_wikipedia(name)
             score   = calc_score(trends, youtube, news, wiki, yt_sub=yt_sub)
+            has_trends = trends["score"] is not None and trends["score"] > 0
 
             c.execute("""
                 INSERT INTO sns_scores (
@@ -741,7 +748,7 @@ def collect_all():
             print(f"  YT Subscribers: {yt_sub}")
             print(f"  News: {news}")
             print(f"  Wikipedia: {wiki}")
-            print(f"  ★ SNSスコア: {score}")
+            print(f"  ★ SNSスコア: {score} {'(Trends込み)' if has_trends else '(Trends除外)'}")
             success_count += 1
 
         save_cache(cache)
